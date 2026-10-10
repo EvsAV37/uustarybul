@@ -174,6 +174,9 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .srow{width:100%;min-height:54px;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:16px;text-align:left;border-bottom:.5px solid var(--ln);line-height:1.3}
 .group>.srow:last-child{border-bottom:0}
 .srow .v{color:var(--mu);display:flex;align-items:center;gap:4px;flex:none}
+.hsel{font:inherit;font-size:16px;color:var(--fg);background:var(--pl);border:0;border-radius:10px;height:36px;padding:0 10px;margin:0 2px}
+.sw:disabled{opacity:.4}
+.sw[aria-busy="true"]{opacity:.6}
 .note{font-size:13px;line-height:1.45;color:var(--mu);margin:0 4px}
 .foot{text-align:center;font-size:12px;line-height:1.6;color:var(--mu);margin-top:18px}
 /* ---------- экраны поверх приложения (вход, отзыв, жалоба) ---------- */
@@ -305,7 +308,7 @@ applyTheme();
 var S = { cities:[], cats:[], city:null, count:null, popular:[], season:null, session:null, stack:[] , allCats:false };
 var app = document.getElementById('app');
 
-sb.auth.getSession().then(function(r){ S.session = r.data.session; });
+sb.auth.getSession().then(function(r){ S.session = r.data.session; pushRefresh(); });
 sb.auth.onAuthStateChange(function(_e, s){ S.session = s; });
 function isGuest(){ return !!(S.session && S.session.user && S.session.user.is_anonymous); }
 function isRegistered(){ return !!(S.session && S.session.user && !S.session.user.is_anonymous); }
@@ -1276,13 +1279,13 @@ function settingsView(){
   var ib = document.getElementById('sInst'); if(ib) ib.onclick = installApp;
   var si = document.getElementById('sIn'); if(si) si.onclick = function(){ loginSheet(); };
   var so = document.getElementById('sOut'); if(so) so.onclick = function(){
-    sb.auth.signOut().then(function(){ toast('Вы вышли'); S.stack=[]; go({name:'home'}, false); });
+    pushOff().then(function(){ return sb.auth.signOut(); }).then(function(){ toast('Вы вышли'); S.stack=[]; go({name:'home'}, false); });
   };
   var sd = document.getElementById('sDel'); if(sd) sd.onclick = function(){
     confirmSheet('Удалить аккаунт?', 'Профиль и карточки сразу перестанут показываться, а через 7 дней аккаунт удалится окончательно. Ваши отзывы о мастерах останутся без имени. До этого срока удаление можно отменить, войдя снова.', 'Удалить аккаунт', function(){
       sb.rpc('request_account_deletion').then(function(r){
         if(r.error) return toast(errText(r.error));
-        return sb.auth.signOut().then(function(){ toast('Аккаунт будет удалён через 7 дней'); S.stack=[]; go({name:'home'}, false); });
+        return pushOff().then(function(){ return sb.auth.signOut(); }).then(function(){ toast('Аккаунт будет удалён через 7 дней'); S.stack=[]; go({name:'home'}, false); });
       });
     });
   };
@@ -1292,25 +1295,126 @@ function settingsView(){
   var me = uid();
   Promise.all([
     sb.from('profiles').select('id').eq('id', me).maybeSingle(),
-    sb.from('notify_prefs').select('expiry,reviews').eq('user_id', me).maybeSingle()
+    sb.from('notify_prefs').select('expiry,reviews,quiet,quiet_from,quiet_to').eq('user_id', me).maybeSingle(),
+    pushIsOn()
   ]).then(function(r){
     if(view!==v || !r[0].data) return;
-    var pr = r[1].data || {expiry:true, reviews:true};
+    var pr = r[1].data || {expiry:true, reviews:true, quiet:false, quiet_from:22, quiet_to:8};
+    var dev = r[2], busy = false;
     var box = document.getElementById('nBox'); if(!box) return;
-    box.outerHTML =
-      '<div class="sec-h">Уведомления</div><div class="group">'+
-      [['expiry','Срок карточек и Про'],['reviews','Новые отзывы']].map(function(o){
-        return '<div class="srow"><span id="nl_'+o[0]+'">'+o[1]+'</span><button type="button" class="sw" role="switch" aria-labelledby="nl_'+o[0]+'" aria-checked="'+(pr[o[0]]!==false)+'" data-np="'+o[0]+'"></button></div>';
-      }).join('')+'</div>'+
-      '<div class="note">Присылать на телефон начнём в одном из ближайших обновлений.</div>';
-    app.querySelectorAll('[data-np]').forEach(function(b){ b.onclick = function(){
-      var k = b.getAttribute('data-np'), on = b.getAttribute('aria-checked')!=='true';
-      b.setAttribute('aria-checked', String(on)); pr[k] = on;
-      sb.from('notify_prefs').upsert({user_id:me, expiry:pr.expiry!==false, reviews:pr.reviews!==false}, {onConflict:'user_id'}).then(function(res){
-        if(res.error){ b.setAttribute('aria-checked', String(!on)); pr[k] = !on; toast(errText(res.error)); }
+    function hours(id, cur, label){
+      var o = ''; for(var h=0; h<24; h++) o += '<option value="'+h+'"'+(h===cur?' selected':'')+'>'+(h<10?'0':'')+h+':00</option>';
+      return '<select class="hsel" id="'+id+'" aria-label="'+label+'">'+o+'</select>';
+    }
+    function note(){
+      var t;
+      if(!pushSupported()) t = isIOS() && !isStandalone()
+        ? 'На iPhone уведомления приходят только в установленном приложении — пункт «Установить на экран телефона» ниже.'
+        : 'Этот браузер не умеет присылать уведомления.';
+      else if(Notification.permission==='denied') t = 'Уведомления запрещены в настройках браузера. Разрешите их для этого сайта и включите снова.';
+      else t = 'О скрытии карточки или профиля после жалоб сообщаем всегда.'+(pr.quiet ? ' В тихие часы уведомления ждут их окончания.' : '');
+      return t;
+    }
+    function save(){
+      return sb.from('notify_prefs').upsert({user_id:me, expiry:pr.expiry!==false, reviews:pr.reviews!==false,
+        quiet:!!pr.quiet, quiet_from:pr.quiet_from, quiet_to:pr.quiet_to}, {onConflict:'user_id'});
+    }
+    function draw(){
+      var canDev = pushSupported() && Notification.permission!=='denied';
+      box.innerHTML =
+        '<div class="sec-h">Уведомления</div><div class="group">'+
+        '<div class="srow"><span id="nl_dev">На этот телефон</span><button type="button" class="sw" role="switch" id="nDev" aria-labelledby="nl_dev" aria-checked="'+(dev&&canDev)+'"'+(canDev?'':' disabled')+(busy?' aria-busy="true"':'')+'></button></div>'+
+        [['expiry','Срок карточек и Про'],['reviews','Новые отзывы'],['quiet','Тихие часы']].map(function(o){
+          var on = o[0]==='quiet' ? !!pr.quiet : pr[o[0]]!==false;
+          return '<div class="srow"><span id="nl_'+o[0]+'">'+o[1]+'</span><button type="button" class="sw" role="switch" aria-labelledby="nl_'+o[0]+'" aria-checked="'+on+'" data-np="'+o[0]+'"></button></div>';
+        }).join('')+
+        (pr.quiet ? '<div class="srow"><span>Время</span><span class="v qh">с '+hours('qFrom', pr.quiet_from, 'Тихие часы, начало')+' до '+hours('qTo', pr.quiet_to, 'Тихие часы, конец')+'</span></div>' : '')+
+        '</div><div class="note">'+esc(note())+'</div>';
+
+      document.getElementById('nDev').onclick = function(){
+        if(busy || !canDev) return;
+        busy = true; draw();
+        var want = !dev;
+        (want ? pushOn() : pushOff()).then(function(){
+          dev = want; busy = false; draw();
+          toast(want ? 'Уведомления включены' : 'Уведомления на этот телефон выключены');
+        }, function(e){
+          busy = false; draw();
+          toast(e && e.code==='denied' ? 'Без разрешения браузера уведомления не придут' : 'Не удалось включить уведомления. Попробуйте ещё раз.');
+        });
+      };
+      box.querySelectorAll('[data-np]').forEach(function(b){ b.onclick = function(){
+        var k = b.getAttribute('data-np'), was = k==='quiet' ? !!pr.quiet : pr[k]!==false;
+        pr[k] = !was; draw();
+        save().then(function(res){ if(res.error){ pr[k] = was; draw(); toast(errText(res.error)); } });
+      }; });
+      ['qFrom','qTo'].forEach(function(id){
+        var el = document.getElementById(id); if(!el) return;
+        el.onchange = function(){
+          var k = id==='qFrom' ? 'quiet_from' : 'quiet_to', was = pr[k];
+          pr[k] = Number(el.value);
+          save().then(function(res){ if(res.error){ pr[k] = was; draw(); toast(errText(res.error)); } });
+        };
       });
-    }; });
+    }
+    draw();
   });
+}
+
+/* ---------- push-уведомления на этот телефон ---------- */
+function pushSupported(){ return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function withTimeout(p, ms){ return Promise.race([p, new Promise(function(_, rej){ setTimeout(function(){ rej({code:'timeout'}); }, ms); })]); }
+function swReady(){ return withTimeout(navigator.serviceWorker.ready, 5000); }
+function keyBytes(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='=';
+  var b = atob(s), u = new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u;
+}
+function sameKey(a, b){
+  a = new Uint8Array(a); if(a.length!==b.length) return false;
+  for(var i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true;
+}
+function pushSave(sub){
+  var j = sub.toJSON();
+  return sb.rpc('save_push_subscription', {p_endpoint:j.endpoint, p_p256dh:j.keys.p256dh, p_auth:j.keys.auth})
+    .then(function(r){ if(r.error) throw r.error; });
+}
+function pushOn(){
+  var key;
+  return Notification.requestPermission().then(function(p){
+    if(p!=='granted') throw {code:'denied'};
+    return sb.rpc('push_public_key');
+  }).then(function(r){
+    if(r.error || !r.data) throw {code:'nokey'};
+    key = keyBytes(r.data);
+    return swReady();
+  }).then(function(reg){
+    return reg.pushManager.getSubscription().then(function(old){
+      if(old && old.options && old.options.applicationServerKey && !sameKey(old.options.applicationServerKey, key))
+        return old.unsubscribe().then(function(){ return null; });
+      return old;
+    }).then(function(old){ return old || reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:key}); });
+  }).then(pushSave);
+}
+function pushOff(){
+  if(!pushSupported()) return Promise.resolve();
+  return swReady().then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(sub){
+    if(!sub) return;
+    return sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint).then(function(){ return sub.unsubscribe(); });
+  }).catch(function(){});
+}
+function pushIsOn(){
+  if(!pushSupported() || Notification.permission!=='granted') return Promise.resolve(false);
+  return swReady().then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(sub){
+    if(!sub) return false;
+    return sb.from('push_subscriptions').select('disabled_at').eq('endpoint', sub.endpoint).maybeSingle()
+      .then(function(r){ return !!(r.data && !r.data.disabled_at); });
+  }).catch(function(){ return false; });
+}
+// При запуске: телефон подписан (значит, мастер сам включил уведомления здесь) — освежить подписку на сервере
+function pushRefresh(){
+  if(!isRegistered() || !pushSupported() || Notification.permission!=='granted') return;
+  swReady().then(function(reg){ return reg.pushManager.getSubscription(); })
+    .then(function(sub){ if(sub) return pushSave(sub); }).catch(function(){});
 }
 
 function tipSheet(){
@@ -1507,6 +1611,13 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
+(function(){
+  var m = /[?&]go=cab\b/.test(location.search);
+  if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
+})();
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function(e){
+  if(e.data && e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
+});
 render();
 loadBase().then(render).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; });
 })();

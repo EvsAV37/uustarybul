@@ -1,8 +1,9 @@
 /* Уустары бул — service worker.
    Страница: сначала сеть (чтобы обновления приходили сразу), без сети — сохранённая копия.
    Значки и шрифты: из кеша, в фоне обновляются.
-   Запросы к Supabase не трогаем — данные всегда свежие. */
-var VERSION = 'ub-v1';
+   Запросы к Supabase не трогаем — данные всегда свежие.
+   Push: показывает уведомление, по нажатию открывает кабинет. */
+var VERSION = 'ub-v2';
 var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png'];
 
 var OFFLINE_HTML = '<!doctype html><html lang="ru"><head><meta charset="utf-8">' +
@@ -58,5 +59,34 @@ self.addEventListener('fetch', function (e) {
       }).catch(function () { return hit || Response.error(); });
       return hit || net;
     });
+  }));
+});
+
+// Push-уведомления (тексты готовит сервер, без персональных данных)
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Уустары бул', {
+    body: d.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/favicon-64.png',
+    tag: d.tag || undefined,
+    lang: 'ru',
+    data: { url: d.url || './?go=cab' }
+  }));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = new URL((e.notification.data && e.notification.data.url) || './?go=cab', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) {
+        c.postMessage({ go: 'cab' });
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(url);
   }));
 });
