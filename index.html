@@ -424,7 +424,7 @@ function profileView(){
     document.getElementById('callBtn').onclick = function(){ contact(p.id, spheres[0]&&spheres[0].id, 'call'); };
     document.getElementById('msgBtn').onclick = function(){ contact(p.id, spheres[0]&&spheres[0].id, 'message'); };
     document.getElementById('favBtn').onclick = function(){ toggleFav(p.id, v); };
-    document.getElementById('revBtn').onclick = function(){ needRegistration('Отзыв могут оставить только зарегистрированные пользователи, которые звонили мастеру за последние 30 дней.'); };
+    document.getElementById('revBtn').onclick = function(){ needRegistration('Отзыв могут оставить только зарегистрированные пользователи.'); };
     document.getElementById('cmpBtn').onclick = function(){ needRegistration('Жаловаться могут только зарегистрированные пользователи. Так жалобы нельзя накрутить.'); };
     document.getElementById('shareBtn').onclick = function(){
       var t = p.display_name+' — '+spheres.map(function(s){return s.title;}).join(', ')+'. Уустары бул';
@@ -549,7 +549,7 @@ function contact(pid, sid, kind){
       '<div class="phone">'+esc(pretty)+'</div>'+
       '<a class="btn call" href="'+(kind==='message'?'sms:':'tel:')+'+'+digits+'">'+(kind==='message'?'Написать СМС':'Позвонить')+'</a>'+
       '<button type="button" class="btn sec" id="cp" style="margin-top:10px">Скопировать номер</button>'+
-      '<p style="margin-top:14px;font-size:13px">Скажите мастеру, что нашли его на Уустары бул. В течение 30 дней после звонка можно оставить отзыв.</p>',
+      '<p style="margin-top:14px;font-size:13px">Скажите мастеру, что нашли его на Уустары бул.</p>',
     function(){ document.getElementById('cp').onclick=function(){
       if(navigator.clipboard) navigator.clipboard.writeText(pretty).then(function(){toast('Номер скопирован');},function(){toast(pretty);}); else toast(pretty); }; });
   });
