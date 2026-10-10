@@ -58,10 +58,10 @@ h1,h2{text-wrap:balance}
 .cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 8px}
 .cat{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;text-align:center;line-height:1.2}
 .cat span{width:60px;height:60px;border-radius:16px;background:var(--sf);display:flex;align-items:center;justify-content:center}
-.season{border-radius:20px;overflow:hidden;background:var(--wc);color:#FFF;height:250px;position:relative;text-align:left;width:100%;display:block}
-.season .deco{position:absolute;right:-20px;top:30px}
-.season .top{position:absolute;top:16px;left:18px;right:18px}
-.season .bar{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.35);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.season{border-radius:20px;overflow:hidden;background:var(--wc);color:#FFF;min-height:250px;position:relative;display:flex;flex-direction:column;cursor:pointer;isolation:isolate}
+.season .deco{position:absolute;right:-20px;top:30px;z-index:-1}
+.season .top{padding:16px 18px 0;flex:1}
+.season .bar{background:rgba(0,0,0,.35);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-top:24px}
 .tip{border-radius:20px;background:var(--sf);padding:16px 18px;display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%}
 .back{display:flex;align-items:center;gap:2px;height:44px;font-size:16px;font-weight:500}
 .list{display:flex;flex-direction:column}
@@ -137,8 +137,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .pgrid .add{border:1.5px dashed var(--dash);background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:500}
 .card{background:var(--sf);border-radius:20px;padding:18px}
 .badge{background:var(--pr);color:var(--prf);font-size:12px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:8px}
-.bar{height:6px;border-radius:3px;background:var(--trk);overflow:hidden}
-.bar>i{display:block;height:100%;background:var(--pr);border-radius:3px}
+.pbar{height:6px;border-radius:3px;background:var(--trk);overflow:hidden}
+.pbar>i{display:block;height:100%;background:var(--pr);border-radius:3px}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tile{background:var(--sf);border-radius:16px;padding:14px}
 .tile b{display:block;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -340,15 +340,15 @@ function homeView(){
     '<div class="cats">'+cats.map(function(c){
       return '<button type="button" class="cat" data-cat="'+c.id+'"><span>'+svg(CAT[c.slug]||I.briefcase,26,1.7)+'</span>'+esc(c.name)+'</button>';
     }).join('')+'</div></section>'+
-  '<button type="button" class="season" data-q="утепление">'+
+  '<div class="season" role="button" tabindex="0" data-q="утепление" aria-label="Утепление и окна: смотреть мастеров">'+
     '<svg class="deco" width="170" height="170" viewBox="0 0 24 24" fill="none" stroke="var(--wcd)" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4M10 4l2 2 2-2M10 20l2-2 2 2M4 10l2 2-2 2M20 10l-2 2 2 2"></path></svg>'+
     '<div class="top"><div style="font-size:12px;letter-spacing:.06em;font-weight:600;color:#CFE0D7">ГОТОВИМСЯ К ЗИМЕ</div>'+
     '<div style="font-size:26px;font-weight:700;line-height:1.15;margin-top:4px">Утеплить дом<br>до морозов</div></div>'+
     '<div class="bar"><span style="width:40px;height:40px;border-radius:10px;background:#FFF;color:#2D4A3E;display:flex;align-items:center;justify-content:center;flex:none">'+svg(I.home,22)+'</span>'+
     '<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">Утепление и окна</div>'+
     '<div style="font-size:13px;color:#DCE8E1">'+(S.season==null?'&nbsp;':S.season+' '+plural(S.season,'мастер','мастера','мастеров')+' в городе')+'</div></div>'+
-    '<span style="background:rgba(255,255,255,.22);padding:9px 16px;border-radius:20px;font-weight:600;font-size:14px">Смотреть</span></div>'+
-  '</button>'+
+    '<span style="background:rgba(255,255,255,.22);padding:9px 16px;border-radius:20px;font-weight:600;font-size:14px;flex:none">Смотреть</span></div>'+
+  '</div>'+
   '<button type="button" class="tip" id="tipBtn"><span style="color:var(--dg);flex:none;margin-top:2px">'+svg(I.shieldw,24)+'</span>'+
     '<span><span class="eyebrow" style="display:block">Совет</span><span style="display:block;font-size:19px;font-weight:700;margin:2px 0 4px">Как не попасть на предоплату</span>'+
     '<span class="muted" style="font-size:14px">Пять правил, прежде чем переводить деньги мастеру</span></span></button>';
@@ -358,7 +358,7 @@ function homeView(){
   document.getElementById('meBtn').onclick = meSheet;
   document.getElementById('tipBtn').onclick = tipSheet;
   document.getElementById('allCats').onclick = function(){ S.allCats=!S.allCats; homeView(); };
-  app.querySelectorAll('[data-q]').forEach(function(b){ b.onclick=function(){ openSearch(b.getAttribute('data-q')); }; });
+  app.querySelectorAll('[data-q]').forEach(function(b){ b.onclick=function(){ openSearch(b.getAttribute('data-q')); }; b.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openSearch(b.getAttribute('data-q')); } }; });
   app.querySelectorAll('[data-cat]').forEach(function(b){ b.onclick=function(){
     var c = S.cats.find(function(x){return x.id===Number(b.getAttribute('data-cat'));});
     go({name:'list', cat:c.id, title:c.name, query:''});
@@ -609,7 +609,7 @@ function cabView(){
     if(pro){
       html += '<div class="card"><div class="row" style="gap:8px"><span class="badge">ПРО</span><span class="muted" style="font-size:14px">до '+dmy(p.pro_until)+'</span></div>'+
         '<div style="font-size:22px;font-weight:700;margin:10px 0">Ещё '+proDays+' '+plural(proDays,'день','дня','дней')+'</div>'+
-        '<div class="bar"><i style="width:'+Math.min(100,Math.round(proDays/90*100))+'%"></i></div>'+
+        '<div class="pbar"><i style="width:'+Math.min(100,Math.round(proDays/90*100))+'%"></i></div>'+
         '<div class="muted" style="font-size:13px;line-height:1.45;margin-top:10px">Без автосписаний. Напомним за 7 дней до конца.</div></div>'+
         '<div class="tiles"><div class="tile"><div class="muted" style="font-size:13px">Просмотры</div><b>'+m.stats.views+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div>'+
         '<div class="tile"><div class="muted" style="font-size:13px">Звонки</div><b>'+m.stats.contacts+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div></div>';
