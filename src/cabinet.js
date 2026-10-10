@@ -483,6 +483,7 @@ function reviewSheet(p){
     '<label class="field"><span>Как подписать отзыв</span><input id="rn" class="inp" maxlength="40" value="'+esc(store('ub_name')||'')+'" placeholder="Ваше имя"></label>'+
     '<div class="muted" style="font-size:13px;line-height:1.45">Отзыв можно оставить в течение 30 дней после звонка — один на мастера. Мастер сможет ответить, но не удалить его.</div>'+
     '<div class="spacer"></div>'+
+    '<label class="check"><input id="rc" type="checkbox"><span>Даю <button type="button" class="lnk" data-doc="consents#distribution">согласие</button> на публикацию отзыва с моим именем</span></label>'+
     '<button type="submit" class="btn pr" id="rs">Опубликовать отзыв</button></form>',
   function(){
     // Когда заказчик звонил или писал мастеру — из журнала контактов
@@ -496,10 +497,15 @@ function reviewSheet(p){
       e.preventDefault();
       if(!rate) return toast('Поставьте оценку');
       var name = document.getElementById('rn').value.trim(); if(!name) return toast('Укажите, как подписать отзыв');
+      if(!document.getElementById('rc').checked) return toast('Отметьте согласие — без него отзыв с именем нельзя опубликовать');
       var btn = document.getElementById('rs'); btn.disabled = true;
+      // Согласие на распространение (вариант Б) — отдельной записью: что, какая версия, когда
+      sb.from('consents').insert({kind:'pd_distribution_review', doc_version:DOC_VERSION}).then(function(c){
+      if(c.error){ btn.disabled=false; return toast(errText(c.error)); }
       sb.from('reviews').insert({profile_id:p.id, author_name:name, rating:rate, title:document.getElementById('rh').value.trim()||null, body:document.getElementById('rt').value.trim()||null}).then(function(r){
         if(r.error){ btn.disabled=false; return toast(dbMsg(r.error) || 'Вы уже оставили отзыв этому мастеру'); }
         store('ub_name', name); closeScreen(); toast('Спасибо за отзыв!'); if(view.name==='profile') profileView();
+      });
       });
     });
   });
