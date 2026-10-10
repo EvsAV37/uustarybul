@@ -1,0 +1,15 @@
+/* Оформление документов — и на отдельной странице, и внутри приложения */
+.doc{font-size:15px;line-height:1.55}
+.doc h1{font-size:26px;line-height:1.2;margin:8px 0 6px;letter-spacing:-.01em}
+.doc h2{font-size:19px;line-height:1.3;margin:26px 0 8px}
+.doc h3{font-size:16px;margin:18px 0 6px}
+.doc p{margin:0 0 10px}
+.doc ul{margin:0 0 10px;padding-left:20px}
+.doc li{margin-bottom:4px}
+.doc .meta{color:var(--mu);font-size:14px}
+.doc .draft{background:var(--mk);color:var(--mkf);border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.4;margin:4px 0 16px}
+.doc mark{background:var(--mk);color:var(--mkf);border-radius:4px;padding:0 3px}
+.doc .tbl{overflow-x:auto;margin:0 -20px 12px;padding:0 20px}
+.doc table{border-collapse:collapse;font-size:13px;line-height:1.4;min-width:560px}
+.doc th,.doc td{border:.5px solid var(--ln);padding:8px;text-align:left;vertical-align:top}
+.doc th{background:var(--sf);font-weight:600}

@@ -183,7 +183,7 @@ function profEditView(){
     '<label class="field"><span>О себе</span><textarea id="fa" class="inp" maxlength="1000" placeholder="Опыт, как работаете, чем отличаетесь">'+esc(p.about||'')+'</textarea></label>'+
     '<div class="group"><div class="grow" style="padding-right:16px"><span class="t" id="trl">Выезжаю по району</span><button type="button" class="sw" role="switch" id="ftr" aria-labelledby="trl" aria-checked="'+v.travels+'"></button></div></div>'+
     (v.travels?'<label class="field"><span>Куда выезжаете (необязательно)</span><input id="ft" class="inp" maxlength="200" value="'+esc(p.travel_note||'')+'" placeholder="Солянка, Токко, по договорённости"></label>':'')+
-    (v.isNew?'<label class="check"><input id="fd" type="checkbox"><span>Согласен, чтобы моё имя, телефон и город показывались в объявлениях на Уустары бул</span></label>':'')+
+    (v.isNew?'<label class="check"><input id="fd" type="checkbox"><span>Согласен, чтобы моё имя, телефон и город показывались в объявлениях на Уустары бул (<button type="button" class="lnk" data-doc="consents#distribution">согласие на распространение</button>)</span></label>':'')+
     '<button type="submit" class="btn pr" id="fs">'+(v.isNew?'Создать профиль':'Сохранить')+'</button>'+
     (v.isNew?'':'<div class="muted" style="font-size:13px;line-height:1.45">Телефон в объявлениях — тот, по которому вы вошли. Город можно менять не чаще раза в 30 дней.</div>')+
     '</form>';

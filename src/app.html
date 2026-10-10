@@ -7,6 +7,7 @@
 <title>Уустары бул</title>
 <meta name="description" content="Местные мастера вашего города: сантехники, электрики, сварщики, репетиторы и другие.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="docs/doc.css">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +23,7 @@
   --bg:#FFFFFF; --fg:#0B0C0E; --mu:#6B7079; --sf:#F4F4F6; --pl:#EFEFF2; --ln:#E5E5EA; --v:#3F434A;
   --pr:#0B0C0E; --prf:#FFFFFF; --call:#1A8048; --callf:#FFFFFF; --callt:#1A8048;
   --dg:#C62828; --dgb:#FDECEC; --dgt:#8A1C1C; --wc:#2D4A3E; --wcd:#4C6A5C; --qt:#D1D1D6;
-  --scrim:rgba(0,0,0,.35); --sheet:#FFFFFF; --segon:#FFFFFF;
+  --scrim:rgba(0,0,0,.35); --sheet:#FFFFFF; --segon:#FFFFFF; --mk:#FFF1C2; --mkf:#5C4200;
   --ok:#1A8048; --warn:#9A5B00; --star:#E0A11B; --staroff:#C4C7CD; --trk:#E1E1E6; --dash:#B8BBC2;
   --font:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
   color-scheme:light;
@@ -31,13 +32,13 @@
   --bg:#1A1B1F; --fg:#F5F5F7; --mu:#9499A3; --sf:#24262B; --pl:#2A2C31; --ln:#2E3035; --v:#CACED4;
   --pr:#F5F5F7; --prf:#1A1B1F; --call:#2DBE6C; --callf:#04200F; --callt:#3DD17D;
   --dg:#FF6B6F; --dgb:#33201F; --dgt:#F2C4C6; --wc:#1F2E28; --wcd:#344D42; --qt:#42454B;
-  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43;
+  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43; --mk:#4A3B12; --mkf:#F7E2A6;
   --ok:#3DD17D; --warn:#F2B84B; --star:#F2B84B; --staroff:#4A4E55; --trk:#3A3D43; --dash:#4A4E55; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1A1B1F; --fg:#F5F5F7; --mu:#9499A3; --sf:#24262B; --pl:#2A2C31; --ln:#2E3035; --v:#CACED4;
   --pr:#F5F5F7; --prf:#1A1B1F; --call:#2DBE6C; --callf:#04200F; --callt:#3DD17D;
   --dg:#FF6B6F; --dgb:#33201F; --dgt:#F2C4C6; --wc:#1F2E28; --wcd:#344D42; --qt:#42454B;
-  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43;
+  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43; --mk:#4A3B12; --mkf:#F7E2A6;
   --ok:#3DD17D; --warn:#F2B84B; --star:#F2B84B; --staroff:#4A4E55; --trk:#3A3D43; --dash:#4A4E55; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -196,6 +197,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .cells span.f{border-color:var(--pr)}
 .cells input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;font-size:16px;caret-color:transparent}
 .spacer{flex:1;min-height:12px}
+.screen.docv{z-index:16}
+.lnk{text-decoration:underline;text-underline-offset:2px;font:inherit;color:inherit;display:inline;padding:0}
 .who{display:flex;align-items:center;gap:14px}
 .who .ava{width:56px;height:56px;border-radius:14px;font-size:19px}
 ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;display:flex;flex-direction:column;gap:8px}
@@ -647,6 +650,30 @@ function installApp(){
     '<li>Выберите «На экран „Домой“» и нажмите «Добавить».</li></ol>'+
     '<button type="button" class="btn sec" data-close>Понятно</button>');
 }
+
+/* ---------- документы: открываются поверх всего, в том числе поверх входа ---------- */
+var DOCS = [['terms','Пользовательское соглашение'],['privacy','Политика обработки персональных данных'],['consents','Согласия на обработку и распространение'],['offer','Оферта на Про-аккаунт']];
+function openDoc(ref){
+  var parts = String(ref).split('#'), key = parts[0], anchor = parts[1];
+  var el = document.createElement('div'); el.className = 'screen docv'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
+  el.innerHTML = '<div class="in">'+scrTop('<button type="button" class="back" data-doc-close>'+svg(I.back,22,2)+'Назад</button>','','')+'<div class="skel" style="height:320px;margin-top:16px"></div></div>';
+  document.body.appendChild(el); requestAnimationFrame(function(){ el.classList.add('on'); });
+  var prevOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden';
+  function close(){ el.classList.remove('on'); setTimeout(function(){ el.remove(); }, 250); document.body.style.overflow = prevOverflow; document.removeEventListener('keydown', esc1, true); }
+  function esc1(e){ if(e.key==='Escape'){ e.stopPropagation(); close(); } }
+  document.addEventListener('keydown', esc1, true);
+  el.querySelector('[data-doc-close]').onclick = close;
+  fetch('docs/'+key+'.html').then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); }).then(function(h){
+    var a = new DOMParser().parseFromString(h, 'text/html').querySelector('article.doc');
+    if(!a) throw new Error('no article');
+    el.firstChild.lastChild.outerHTML = '<article class="doc" style="margin-top:8px">'+a.innerHTML+'</article>';
+    if(anchor){ var t = el.querySelector('#'+anchor); if(t) t.scrollIntoView(); }
+  }).catch(function(){ close(); toast('Не удалось открыть документ. Проверьте интернет.'); });
+}
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-doc]'); if(!b) return;
+  e.preventDefault(); e.stopPropagation(); openDoc(b.getAttribute('data-doc'));
+}, true);
 
 /*SETTINGS*/
 function tipSheet(){

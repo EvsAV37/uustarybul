@@ -24,6 +24,8 @@ function settingsView(){
 
     (canInstall() ? '<div class="sec-h">Приложение</div><div class="group"><button type="button" class="srow" id="sInst"><span>Установить на экран телефона</span><span class="v">'+chev+'</span></button></div>' : '')+
 
+    '<div class="sec-h">Документы</div><div class="group">'+DOCS.map(function(d){
+      return '<button type="button" class="srow" data-doc="'+d[0]+'"><span>'+d[1]+'</span><span class="v">'+chev+'</span></button>'; }).join('')+'</div>'+
     '<div class="sec-h">Аккаунт</div><div class="group">'+
       (reg ? '<div class="srow"><span>Номер</span><span class="v">'+esc(maskPhone(S.session.user.phone))+'</span></div>'+
              '<button type="button" class="srow" id="sOut">Выйти</button>'+

@@ -49,10 +49,10 @@ function loginSheet(after){
       '<h1 class="lg-h">Вход по номеру</h1>'+
       '<p class="lg-p">Мы позвоним и сразу сбросим. Введите последние 4 цифры номера, с которого поступит звонок. Отвечать не нужно.</p>'+
       '<label class="field"><span>Номер телефона</span><input id="lp" class="inp" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 ___ ___-__-__" style="height:54px;font-size:20px;letter-spacing:.02em" value="'+esc(phone)+'"></label>'+
-      '<label class="check" style="margin-top:4px"><input id="lc" type="checkbox"><span>Даю согласие на обработку персональных данных</span></label>'+
+      '<label class="check" style="margin-top:4px"><input id="lc" type="checkbox"><span>Даю <button type="button" class="lnk" data-doc="consents#processing">согласие на обработку персональных данных</button></span></label>'+
       '<div class="spacer"></div>'+
       '<button class="btn pr" id="lb" type="submit">Получить звонок</button>'+
-      '<p class="lg-small">Продолжая, вы принимаете Пользовательское соглашение и Политику обработки персональных данных</p>'+
+      '<p class="lg-small">Продолжая, вы принимаете <button type="button" class="lnk" data-doc="terms">Пользовательское соглашение</button> и <button type="button" class="lnk" data-doc="privacy">Политику обработки персональных данных</button></p>'+
       '<p class="lg-small">Для проверки прототипа: +7 000 000-00-01, код 1234</p>'+
       '</form>'),
     function(){

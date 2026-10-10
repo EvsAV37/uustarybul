@@ -18,3 +18,35 @@ assert old in lib, 'другая версия supabase-js — проверь п�
 lib = lib.replace(old, 'if(!e)e="https://localhost/";').replace('</script', '<\\/script')
 open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf8').write(src.replace('/*SUPABASE_UMD*/', lib))
 print('index.html собран')
+
+# Документы: docs/src/*.html → docs/*.html (отдельные страницы; приложение открывает их у себя на экране)
+import re, glob
+DOC_TPL = '''<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{title} — Уустары бул</title>
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<style>
+:root{{--bg:#FFFFFF;--fg:#0B0C0E;--mu:#6B7079;--sf:#F4F4F6;--ln:#E5E5EA;--mk:#FFF1C2;--mkf:#5C4200;color-scheme:light}}
+@media (prefers-color-scheme:dark){{:root{{--bg:#1A1B1F;--fg:#F5F5F7;--mu:#9499A3;--sf:#24262B;--ln:#2E3035;--mk:#4A3B12;--mkf:#F7E2A6;color-scheme:dark}}}}
+body{{margin:0;background:var(--bg);color:var(--fg);font-family:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}}
+main{{max-width:720px;margin:0 auto;padding:16px 20px 48px}}
+a.back{{display:inline-flex;align-items:center;height:44px;font-size:16px;font-weight:500;color:inherit;text-decoration:none}}
+</style>
+<link rel="stylesheet" href="doc.css">
+</head>
+<body><main><a class="back" href="../">‹ Уустары бул</a>
+<article class="doc">
+<div class="draft">Черновик. Документ ещё не утверждён, выделенные места будут заполнены.</div>
+{body}
+</article></main></body>
+</html>
+'''
+for src in sorted(glob.glob(os.path.join(ROOT, 'docs', 'src', '*.html'))):
+    body = open(src, encoding='utf8').read()
+    body = re.sub(r'\[([^\]<>]+)\]', r'<mark>[\1]</mark>', body)
+    title = re.search(r'<h1>(.*?)</h1>', body).group(1)
+    open(os.path.join(ROOT, 'docs', os.path.basename(src)), 'w', encoding='utf8').write(DOC_TPL.format(title=title, body=body))
+print('документы собраны')
