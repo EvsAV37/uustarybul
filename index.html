@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <title>Уустары бул</title>
+<meta name="description" content="Местные мастера вашего города: сантехники, электрики, сварщики, репетиторы и другие.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Уустары бул">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -974,11 +982,35 @@ function citySheet(){
     S.city=Number(b.getAttribute('data-city')); store('ub_city', String(S.city)); closeSheet(); render(); loadCity();
   }; }); });
 }
+/* ---------- приложение на экране (PWA) ---------- */
+var installEvt = null;
+function isStandalone(){ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installEvt = e; });
+window.addEventListener('appinstalled', function(){ installEvt = null; toast('Приложение добавлено на экран'); });
+if('serviceWorker' in navigator && window.isSecureContext){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+function canInstall(){ return !isStandalone() && (installEvt || isIOS()); }
+function installApp(){
+  if(installEvt){
+    var ev = installEvt; installEvt = null;
+    ev.prompt(); closeSheet();
+    return;
+  }
+  openSheet('<h2>Установить на iPhone</h2><p>Значок появится на экране «Домой», приложение будет открываться без браузера.</p>'+
+    '<ol class="rules"><li>Откройте эту страницу в Safari.</li>'+
+    '<li>Нажмите кнопку «Поделиться» внизу экрана.</li>'+
+    '<li>Выберите «На экран „Домой“» и нажмите «Добавить».</li></ol>'+
+    '<button type="button" class="btn sec" data-close>Понятно</button>');
+}
+
 function meSheet(){
   var t = store('ub_theme')||'system';
   var who = isRegistered() ? 'Вы вошли по номеру' : isGuest() ? 'Вы вошли как гость' : 'Вы не вошли';
   openSheet('<h2>Аккаунт</h2><p>'+who+'.</p>'+
     (isRegistered()||isGuest() ? '<button type="button" class="opt" id="outBtn">Выйти</button>' : '<button type="button" class="opt" id="inBtn">Войти по номеру</button>')+
+    (canInstall() ? '<button type="button" class="opt" id="instBtn">Установить приложение<span class="muted" style="font-size:13px">на экран телефона</span></button>' : '')+
     '<div class="eyebrow" style="margin:20px 0 4px">Тема</div>'+
     [['system','Как в системе'],['light','Светлая'],['dark','Тёмная']].map(function(o){
       return '<button type="button" class="opt" data-theme-opt="'+o[0]+'">'+o[1]+(t===o[0]?'<span style="color:var(--callt)">'+svg(I.check,22,2.2)+'</span>':'')+'</button>'; }).join('')+
@@ -987,6 +1019,7 @@ function meSheet(){
     el.querySelectorAll('[data-theme-opt]').forEach(function(b){ b.onclick=function(){ store('ub_theme', b.getAttribute('data-theme-opt')); applyTheme(); meSheet(); }; });
     var o=document.getElementById('outBtn'); if(o) o.onclick=function(){ sb.auth.signOut().then(function(){ closeSheet(); toast('Вы вышли'); render(); }); };
     var i=document.getElementById('inBtn'); if(i) i.onclick=function(){ loginSheet(); };
+    var ib=document.getElementById('instBtn'); if(ib) ib.onclick=function(){ installApp(); };
   });
 }
 function tipSheet(){
