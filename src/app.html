@@ -22,7 +22,7 @@
   --bg:#FFFFFF; --fg:#0B0C0E; --mu:#6B7079; --sf:#F4F4F6; --pl:#EFEFF2; --ln:#E5E5EA; --v:#3F434A;
   --pr:#0B0C0E; --prf:#FFFFFF; --call:#1A8048; --callf:#FFFFFF; --callt:#1A8048;
   --dg:#C62828; --dgb:#FDECEC; --dgt:#8A1C1C; --wc:#2D4A3E; --wcd:#4C6A5C; --qt:#D1D1D6;
-  --scrim:rgba(0,0,0,.35); --sheet:#FFFFFF;
+  --scrim:rgba(0,0,0,.35); --sheet:#FFFFFF; --segon:#FFFFFF;
   --ok:#1A8048; --warn:#9A5B00; --star:#E0A11B; --staroff:#C4C7CD; --trk:#E1E1E6; --dash:#B8BBC2;
   --font:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
   color-scheme:light;
@@ -31,13 +31,13 @@
   --bg:#1A1B1F; --fg:#F5F5F7; --mu:#9499A3; --sf:#24262B; --pl:#2A2C31; --ln:#2E3035; --v:#CACED4;
   --pr:#F5F5F7; --prf:#1A1B1F; --call:#2DBE6C; --callf:#04200F; --callt:#3DD17D;
   --dg:#FF6B6F; --dgb:#33201F; --dgt:#F2C4C6; --wc:#1F2E28; --wcd:#344D42; --qt:#42454B;
-  --scrim:rgba(0,0,0,.6); --sheet:#202226;
+  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43;
   --ok:#3DD17D; --warn:#F2B84B; --star:#F2B84B; --staroff:#4A4E55; --trk:#3A3D43; --dash:#4A4E55; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1A1B1F; --fg:#F5F5F7; --mu:#9499A3; --sf:#24262B; --pl:#2A2C31; --ln:#2E3035; --v:#CACED4;
   --pr:#F5F5F7; --prf:#1A1B1F; --call:#2DBE6C; --callf:#04200F; --callt:#3DD17D;
   --dg:#FF6B6F; --dgb:#33201F; --dgt:#F2C4C6; --wc:#1F2E28; --wcd:#344D42; --qt:#42454B;
-  --scrim:rgba(0,0,0,.6); --sheet:#202226;
+  --scrim:rgba(0,0,0,.6); --sheet:#202226; --segon:#3A3D43;
   --ok:#3DD17D; --warn:#F2B84B; --star:#F2B84B; --staroff:#4A4E55; --trk:#3A3D43; --dash:#4A4E55; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -161,8 +161,43 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .btn.dg{background:var(--dg);color:#FFF}
 .btn[disabled]{opacity:.5;cursor:default}
 .link{font-size:15px;font-weight:500;color:var(--fg);text-decoration:underline;text-underline-offset:3px}
-.topbar{display:flex;justify-content:space-between;align-items:center;height:44px;margin-bottom:-8px}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:44px;margin-bottom:-8px}
+.topbar>:last-child{justify-self:end}
 .topbar .ttl{font-size:16px;font-weight:600}
+/* ---------- настройки ---------- */
+.setx{display:flex;flex-direction:column;gap:10px;margin-top:-14px}
+.sec-h{font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--mu);text-transform:uppercase;margin:14px 4px 0}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:var(--sf)}
+.seg button{height:40px;border-radius:10px;font-size:14px;font-weight:500;color:var(--mu)}
+.seg button[aria-checked="true"]{background:var(--segon);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.srow{width:100%;min-height:54px;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:16px;text-align:left;border-bottom:.5px solid var(--ln);line-height:1.3}
+.group>.srow:last-child{border-bottom:0}
+.srow .v{color:var(--mu);display:flex;align-items:center;gap:4px;flex:none}
+.note{font-size:13px;line-height:1.45;color:var(--mu);margin:0 4px}
+.foot{text-align:center;font-size:12px;line-height:1.6;color:var(--mu);margin-top:18px}
+/* ---------- экраны поверх приложения (вход, отзыв, жалоба) ---------- */
+.screen{position:fixed;inset:0;z-index:15;background:var(--bg);overflow-y:auto;transform:translateY(100%);transition:transform .25s ease}
+.screen.on{transform:none}
+.screen>.in{max-width:480px;margin:0 auto;min-height:100%;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 8px) 24px calc(env(safe-area-inset-bottom,0px) + 24px);display:flex;flex-direction:column}
+.scr-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:44px;gap:8px}
+.scr-top>:last-child{justify-self:end}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-20px;padding-right:20px}
+.chips.scroll::-webkit-scrollbar{display:none}
+.scr-top .ttl{font-size:17px;font-weight:600}
+.scr-top .side{display:flex}
+.scr-top .side:last-child{justify-content:flex-end}
+.scr-body{display:flex;flex-direction:column;flex:1;gap:16px;margin-top:16px}
+.brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px}
+.lg-h{margin:0;font-size:26px;font-weight:700}
+.lg-p{margin:-8px 0 6px;font-size:15px;line-height:1.45;color:var(--mu)}
+.lg-small{margin:0;font-size:12px;line-height:1.45;color:var(--mu);text-align:center}
+.cells{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.cells span{height:68px;border-radius:16px;border:2px solid var(--trk);background:var(--sf);font-size:30px;font-weight:600;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.cells span.f{border-color:var(--pr)}
+.cells input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;font-size:16px;caret-color:transparent}
+.spacer{flex:1;min-height:12px}
+.who{display:flex;align-items:center;gap:14px}
+.who .ava{width:56px;height:56px;border-radius:14px;font-size:19px}
 ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
@@ -232,6 +267,17 @@ function rateLine(r){
 var MG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 function shortDate(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()].slice(0,3)+'.'; }
 function sinceMonth(iso){ var d=new Date(iso); return MG[d.getMonth()]+' '+d.getFullYear(); }
+/* «С нами»: 5 мес. / 1 год / 2 года и 3 мес. — для ячейки: крупно первое число, мелко остальное */
+function withUs(iso){
+  var a=new Date(iso), b=new Date();
+  var m=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())-(b.getDate()<a.getDate()?1:0);
+  if(m<1) return {v:'<1', s:'мес.', text:'меньше месяца'};
+  var y=Math.floor(m/12), mm=m%12;
+  if(!y) return {v:String(mm), s:'мес.', text:mm+' мес.'};
+  var yl=plural(y,'год','года','лет');
+  if(!mm) return {v:String(y), s:yl, text:y+' '+yl};
+  return {v:String(y), s:yl+' и '+mm+' мес.', text:y+' '+yl+' и '+mm+' мес.'};
+}
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 var toastT;
 function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){t.hidden=true;},2600); }
@@ -272,6 +318,7 @@ window.addEventListener('popstate', function(){ if(S.stack.length) back(); });
 function tabs(){
   var cur = view.name==='list' || view.name==='profile' ? 'search' : (view.name==='profEdit'||view.name==='sphere') ? 'cab' : view.name;
   if(view.name==='profile' && view.own) cur = 'cab';
+  if(view.name==='settings') cur = view.tab||'cab';
   var items = [['home','Главная',I.home],['search','Поиск',I.search],['fav','Избранное',I.heart],['cab','Кабинет',I.user]];
   document.getElementById('tabs').innerHTML = items.map(function(t){
     return '<button type="button" data-tab="'+t[0]+'"'+(cur===t[0]?' aria-current="page"':'')+'>'+svg(t[2],24)+t[1]+'</button>';
@@ -324,6 +371,7 @@ function render(){
   if(view.name==='cab') return cabView();
   if(view.name==='profEdit') return profEditView();
   if(view.name==='sphere') return sphereView();
+  if(view.name==='settings') return settingsView();
 }
 
 function homeView(){
@@ -335,7 +383,7 @@ function homeView(){
   '<div class="between">'+
     '<button type="button" class="pill" id="cityBtn" aria-haspopup="dialog">'+svg(I.pin,18)+esc(cityName()||'Город')+svg(I.down,16,2)+'</button>'+
     '<div class="row"><span class="demo" title="В базе вымышленные мастера для проверки">Демо</span>'+
-    '<button type="button" class="circle" id="meBtn" aria-label="Аккаунт и тема">'+svg(I.user,20)+'</button></div>'+
+    '<button type="button" class="circle" id="meBtn" aria-label="Настройки">'+svg(I.user,20)+'</button></div>'+
   '</div>'+
   '<div><div class="eyebrow">'+esc(today)+'</div><h1 class="h1">Найдите мастера</h1>'+
     '<div class="muted" style="font-size:15px;margin-top:6px">'+count+'</div></div>'+
@@ -363,7 +411,7 @@ function homeView(){
 
   document.getElementById('sf').addEventListener('submit', function(e){ e.preventDefault(); var q=document.getElementById('q').value.trim(); if(q) openSearch(q); });
   document.getElementById('cityBtn').onclick = citySheet;
-  document.getElementById('meBtn').onclick = meSheet;
+  document.getElementById('meBtn').onclick = function(){ go({name:'settings', from:'Главная', tab:'home'}); };
   document.getElementById('tipBtn').onclick = tipSheet;
   document.getElementById('allCats').onclick = function(){ S.allCats=!S.allCats; homeView(); };
   app.querySelectorAll('[data-q]').forEach(function(b){ b.onclick=function(){ openSearch(b.getAttribute('data-q')); }; b.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openSearch(b.getAttribute('data-q')); } }; });
@@ -375,14 +423,14 @@ function homeView(){
 function openSearch(q){ sb.rpc('log_search',{p_city:S.city, p_query:q}); go({name:'list', query:q, title:'«'+q+'»'}); }
 
 function listView(){
-  var v = view; v.sort = v.sort || 'default';
+  var v = view; v.sort = v.sort || 'default'; v.filter = v.filter || 'all';
   app.innerHTML =
   (S.stack.length ? '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Назад</button>' : '')+
-  '<div><h1 class="h1">'+esc(v.title)+'</h1><div class="muted" id="cnt" style="font-size:15px;margin-top:6px">&nbsp;</div></div>'+
+  '<div><h1 class="h1">'+esc(v.title)+'</h1><div class="between" style="margin-top:6px;align-items:baseline"><span class="muted" id="cnt" style="font-size:15px">&nbsp;</span>'+
+    '<button type="button" id="sortB" style="font-size:14px;font-weight:500;color:var(--mu);flex:none" aria-label="Порядок: '+(v.sort==='rating'?'по рейтингу':'как обычно')+'">'+(v.sort==='rating'?'По рейтингу':'Как обычно')+' '+svg('M7 10l5-5 5 5M7 14l5 5 5-5',14,2)+'</button></div></div>'+
   '<form id="rf" role="search"><label class="search">'+svg(I.search,20)+'<input id="rq" type="search" enterkeyhint="search" autocomplete="off" aria-label="Уточнить поиск" placeholder="'+(v.cat?'Например, бойлер или засор':'Что нужно сделать?')+'" value="'+esc(v.cat?v.refine||'':v.query)+'"></label></form>'+
-  '<div class="chips" role="group" aria-label="Порядок">'+
-    '<button type="button" class="chip" data-sort="default" aria-pressed="'+(v.sort==='default')+'">Как обычно</button>'+
-    '<button type="button" class="chip" data-sort="rating" aria-pressed="'+(v.sort==='rating')+'">По рейтингу</button></div>'+
+  '<div class="chips scroll" role="group" aria-label="Фильтр">'+[['all','Все'],['reviews','С отзывами'],['photos','С фото работ'],['new','Новые']].map(function(f){
+    return '<button type="button" class="chip" data-flt="'+f[0]+'" aria-pressed="'+(v.filter===f[0])+'">'+f[1]+'</button>'; }).join('')+'</div>'+
   '<div class="list" id="res">'+[0,1,2,3].map(function(){return '<div class="item"><div class="skel" style="width:60px;height:60px;border-radius:15px"></div><div style="flex:1"><div class="skel" style="height:14px;width:60%"></div><div class="skel" style="height:12px;width:80%;margin-top:8px"></div></div></div>';}).join('')+'</div>';
   if(S.stack.length) document.getElementById('bk').onclick = back;
   document.getElementById('rf').addEventListener('submit', function(e){
@@ -390,17 +438,18 @@ function listView(){
     if(v.cat){ v.refine=q; } else { v.query=q; v.title = q ? '«'+q+'»' : 'Все мастера'; if(q) sb.rpc('log_search',{p_city:S.city,p_query:q}); }
     listView();
   });
-  app.querySelectorAll('[data-sort]').forEach(function(b){ b.onclick=function(){ v.sort=b.getAttribute('data-sort'); listView(); }; });
+  app.querySelectorAll('[data-flt]').forEach(function(b){ b.onclick=function(){ v.filter=b.getAttribute('data-flt'); listView(); }; });
+  document.getElementById('sortB').onclick = function(){ v.sort = v.sort==='rating' ? 'default' : 'rating'; listView(); };
 
   var q = v.cat ? (v.refine||null) : (v.query||null);
-  sb.rpc('search_spheres',{p_city:S.city, p_category:v.cat||null, p_query:q, p_sort:v.sort, p_limit:50}).then(function(r){
+  sb.rpc('find_spheres',{p_city:S.city, p_category:v.cat||null, p_query:q, p_sort:v.sort, p_filter:v.filter, p_limit:50}).then(function(r){
     if(view!==v) return;
     var res = document.getElementById('res');
     if(r.error){ res.innerHTML='<div class="empty">'+esc(errText(r.error))+'</div>'; return; }
     var rows = r.data||[];
     var people = {}; rows.forEach(function(x){people[x.profile_id]=1;}); var n = Object.keys(people).length;
     document.getElementById('cnt').textContent = n ? n+' '+plural(n,'мастер','мастера','мастеров')+' в '+cityIn() : '';
-    if(!rows.length){ res.innerHTML='<div class="empty">Никого не нашли. Попробуйте другое слово, например «ремонт» или «уборка».</div>'; return; }
+    if(!rows.length){ res.innerHTML='<div class="empty">'+(v.filter!=='all'?'С этим фильтром никого нет. Нажмите «Все», чтобы увидеть всех мастеров.':'Никого не нашли. Попробуйте другое слово, например «ремонт» или «уборка».')+'</div>'; return; }
     res.innerHTML = rows.map(function(x){
       var sub = esc(x.title) + (x.price_from!=null?' · от '+money(x.price_from)+' ₽':'') + (x.travels?' · выезд':'');
       return '<div class="item"><button type="button" class="main" data-p="'+x.profile_id+'">'+
@@ -422,7 +471,7 @@ function profileView(){
   Promise.all([
     sb.from('profiles').select('id,kind,display_name,org_name,about,city_id,travels,travel_note,rating_avg,reviews_count,created_at').eq('id',v.id).maybeSingle(),
     sb.from('spheres').select('id,title,description,published_at,services(id,title,price_from,price_to,unit,sort),photos(id,storage_path,sort)').eq('profile_id',v.id).eq('status','active').order('published_at'),
-    sb.from('reviews').select('id,author_name,rating,body,reply,created_at').eq('profile_id',v.id).order('created_at',{ascending:false}),
+    sb.from('reviews').select('id,author_name,title,rating,body,reply,created_at').eq('profile_id',v.id).order('created_at',{ascending:false}),
     isRegistered() ? sb.from('favorites').select('profile_id').eq('profile_id',v.id) : Promise.resolve({data:[]})
   ]).then(function(r){
     if(view!==v) return;
@@ -436,6 +485,7 @@ function profileView(){
     var c = S.cities.find(function(x){return x.id===p.city_id;});
     var showRating = p.reviews_count>=3 && p.rating_avg!=null;
     var revShown = v.allRev ? reviews : reviews.slice(0,2);
+    var since = withUs(p.created_at);
 
     app.innerHTML =
     '<div class="between" style="margin-bottom:-10px"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
@@ -451,9 +501,9 @@ function profileView(){
     '</div>'+
     '<div class="stats">'+
       '<div><div class="stat-k">'+p.reviews_count+' '+plural(p.reviews_count,'отзыв','отзыва','отзывов')+'</div><div class="stat-v">'+(showRating?String(p.rating_avg).replace('.',','):'—')+'</div><div class="stat-s">'+(showRating?stars(p.rating_avg):'после 3 отзывов')+'</div></div>'+
+      '<div><div class="stat-k">С нами</div><div class="stat-v">'+esc(since.v)+'</div><div class="stat-s">'+esc(since.s)+'</div></div>'+
       '<div><div class="stat-k">Цена</div><div class="stat-v">'+(minP!=null?money(minP):'—')+'</div><div class="stat-s">'+(minP!=null?'₽ от':'договорная')+'</div></div>'+
       '<div><div class="stat-k">Выезд</div><div class="stat-v">'+svg(I.car,22)+'</div><div class="stat-s">'+(p.travels?'по району':'по городу')+'</div></div>'+
-      '<div><div class="stat-k">С нами</div><div class="stat-v">'+new Date(p.created_at).getFullYear()+'</div><div class="stat-s">'+MG[new Date(p.created_at).getMonth()].slice(0,3)+'.</div></div>'+
     '</div>'+
     (p.travels&&p.travel_note ? '<div class="muted" style="font-size:14px;margin-top:-10px">Выезжает: '+esc(p.travel_note)+'</div>' : '')+
     (photos.length ? '<section><h2 class="h2" style="margin-bottom:10px">Фото работ</h2><div class="photos">'+photos.map(function(x){
@@ -469,8 +519,8 @@ function profileView(){
     '<section><div class="between" style="align-items:baseline;margin-bottom:10px"><h2 class="h2" style="font-size:21px">Отзывы</h2>'+
       (reviews.length>2&&!v.allRev?'<button type="button" id="allRev" style="font-size:15px;font-weight:500">Все '+reviews.length+'</button>':'')+'</div>'+
       (reviews.length ? '<div style="display:flex;flex-direction:column;gap:10px">'+revShown.map(function(x){
-        return '<div class="review"><div class="between" style="align-items:baseline"><div style="font-weight:600;font-size:15px">'+esc(x.author_name)+'</div><div class="muted" style="font-size:12px">'+shortDate(x.created_at)+'</div></div>'+
-          '<div style="font-size:12px;color:var(--v);margin:2px 0 8px" aria-label="Оценка '+x.rating+' из 5">'+stars(x.rating)+'</div>'+
+        return '<div class="review"><div class="between" style="align-items:baseline"><div style="font-weight:600;font-size:15px">'+esc(x.title||x.author_name)+'</div><div class="muted" style="font-size:12px">'+shortDate(x.created_at)+'</div></div>'+
+          '<div style="font-size:12px;color:var(--v);margin:2px 0 8px"><span aria-label="Оценка '+x.rating+' из 5">'+stars(x.rating)+'</span>'+(x.title?' · '+esc(x.author_name):'')+'</div>'+
           (x.body?'<div style="font-size:14px;line-height:1.45;color:var(--v)">'+esc(x.body)+'</div>':'')+
           (x.reply?'<div class="reply"><div style="font-size:13px;font-weight:600">Ответ мастера</div><div class="muted" style="font-size:13px">'+esc(x.reply)+'</div></div>':'')+'</div>';
       }).join('')+'</div>' : '<div class="muted" style="font-size:15px">Отзывов пока нет.</div>')+
@@ -540,7 +590,33 @@ function closeSheet(now){
   s.classList.remove('on'); c.classList.remove('on'); setTimeout(function(){ s.remove(); c.remove(); },250);
   if(lastFocus && lastFocus.focus) lastFocus.focus({preventScroll:true});
 }
-document.addEventListener('keydown', function(e){ if(e.key==='Escape' && sheetEl) closeSheet(); });
+/* Экран поверх приложения: вход, отзыв, жалоба. Повторный вызов меняет содержимое без анимации. */
+var screenEl = null;
+function openScreen(html, after){
+  closeSheet(true);
+  if(!screenEl){
+    screenEl = document.createElement('div'); screenEl.className='screen'; screenEl.setAttribute('role','dialog'); screenEl.setAttribute('aria-modal','true');
+    screenEl.innerHTML = '<div class="in"></div>';
+    document.body.appendChild(screenEl);
+    var s = screenEl; requestAnimationFrame(function(){ s.classList.add('on'); });
+    document.body.style.overflow = 'hidden';
+  }
+  screenEl.scrollTop = 0;
+  screenEl.firstChild.innerHTML = html;
+  screenEl.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=function(){ closeScreen(); }; });
+  if(after) after(screenEl);
+}
+function closeScreen(){
+  if(!screenEl) return; var s = screenEl; screenEl = null;
+  document.body.style.overflow = '';
+  s.classList.remove('on'); setTimeout(function(){ s.remove(); }, 250);
+  if(typeof screenOnClose === 'function'){ var f = screenOnClose; screenOnClose = null; f(); }
+}
+var screenOnClose = null;
+function scrTop(left, title, right){
+  return '<div class="scr-top"><span class="side">'+(left||'')+'</span><span class="ttl">'+esc(title||'')+'</span><span class="side">'+(right||'')+'</span></div>';
+}
+document.addEventListener('keydown', function(e){ if(e.key!=='Escape') return; if(sheetEl) closeSheet(); else if(screenEl) closeScreen(); });
 
 function citySheet(){
   openSheet('<h2>Ваш город</h2><p>Покажем мастеров этого города. Новые города добавляются по мере запуска.</p>'+
@@ -572,23 +648,7 @@ function installApp(){
     '<button type="button" class="btn sec" data-close>Понятно</button>');
 }
 
-function meSheet(){
-  var t = store('ub_theme')||'system';
-  var who = isRegistered() ? 'Вы вошли по номеру' : isGuest() ? 'Вы вошли как гость' : 'Вы не вошли';
-  openSheet('<h2>Аккаунт</h2><p>'+who+'.</p>'+
-    (isRegistered()||isGuest() ? '<button type="button" class="opt" id="outBtn">Выйти</button>' : '<button type="button" class="opt" id="inBtn">Войти по номеру</button>')+
-    (canInstall() ? '<button type="button" class="opt" id="instBtn">Установить приложение<span class="muted" style="font-size:13px">на экран телефона</span></button>' : '')+
-    '<div class="eyebrow" style="margin:20px 0 4px">Тема</div>'+
-    [['system','Как в системе'],['light','Светлая'],['dark','Тёмная']].map(function(o){
-      return '<button type="button" class="opt" data-theme-opt="'+o[0]+'">'+o[1]+(t===o[0]?'<span style="color:var(--callt)">'+svg(I.check,22,2.2)+'</span>':'')+'</button>'; }).join('')+
-    '<p style="margin-top:18px;font-size:12px">© 2026 Евсеев А.В. · Прототип, данные вымышленные</p>',
-  function(el){
-    el.querySelectorAll('[data-theme-opt]').forEach(function(b){ b.onclick=function(){ store('ub_theme', b.getAttribute('data-theme-opt')); applyTheme(); meSheet(); }; });
-    var o=document.getElementById('outBtn'); if(o) o.onclick=function(){ sb.auth.signOut().then(function(){ closeSheet(); toast('Вы вышли'); render(); }); };
-    var i=document.getElementById('inBtn'); if(i) i.onclick=function(){ loginSheet(); };
-    var ib=document.getElementById('instBtn'); if(ib) ib.onclick=function(){ installApp(); };
-  });
-}
+/*SETTINGS*/
 function tipSheet(){
   openSheet('<h2>Как не попасть на предоплату</h2><p>Пять правил, прежде чем переводить деньги мастеру.</p>'+
     '<ol class="rules"><li>Не платите вперёд за всю работу. Платите после того, как приняли результат.</li>'+

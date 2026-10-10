@@ -34,7 +34,7 @@ function loadMine(){
     sb.from('profiles').select('*').eq('id',id).maybeSingle(),
     sb.from('spheres').select('id,title,description,category_id,status,published_at,expires_at,created_at,services(id,is_hidden),photos(id,is_hidden)').eq('profile_id',id).order('created_at'),
     sb.rpc('profile_limits',{p_profile:id}),
-    sb.from('reviews').select('id,author_name,rating,body,reply,created_at,is_hidden').eq('profile_id',id).order('created_at',{ascending:false}),
+    sb.from('reviews').select('id,author_name,title,rating,body,reply,created_at,is_hidden').eq('profile_id',id).order('created_at',{ascending:false}),
     sb.from('stats_daily').select('views,contacts').eq('profile_id',id).gte('day',since)
   ]).then(function(r){
     var err = r[0].error||r[1].error;
@@ -65,8 +65,9 @@ function cabView(){
       '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Станьте мастером на Уустары бул</div>'+
       '<div class="muted" style="font-size:15px;line-height:1.5">Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.</div></div>'+
       '<button type="button" class="btn pr" id="lg">Войти по номеру</button>'+
-      '<div class="muted" style="font-size:13px;line-height:1.45">Вход нужен и заказчикам — чтобы сохранять мастеров в избранное, оставлять отзывы и жалобы.</div>';
+      '<div class="muted" style="font-size:13px;line-height:1.45">Вход нужен и заказчикам — чтобы сохранять мастеров в избранное, оставлять отзывы и жалобы.</div>'+settingsBlock(false);
     document.getElementById('lg').onclick = function(){ loginSheet(function(){ render(); }); };
+    bindSettings(null);
     return;
   }
   app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1><div class="skel" style="height:64px"></div><div class="skel" style="height:160px"></div>';
@@ -127,8 +128,8 @@ function cabView(){
     if(m.reviews.length){
       html += '<section><h2 class="h2" style="font-size:20px;margin-bottom:10px">Отзывы обо мне</h2><div style="display:flex;flex-direction:column;gap:10px">'+
         m.reviews.slice(0, v.allRev?50:3).map(function(x){
-          return '<div class="review"><div class="between" style="align-items:baseline"><div style="font-weight:600;font-size:15px">'+esc(x.author_name)+'</div><div class="muted" style="font-size:12px">'+shortDate(x.created_at)+'</div></div>'+
-            '<div style="font-size:12px;color:var(--v);margin:2px 0 8px">'+stars(x.rating)+(x.is_hidden?' · скрыт после жалоб':'')+'</div>'+
+          return '<div class="review"><div class="between" style="align-items:baseline"><div style="font-weight:600;font-size:15px">'+esc(x.title||x.author_name)+'</div><div class="muted" style="font-size:12px">'+shortDate(x.created_at)+'</div></div>'+
+            '<div style="font-size:12px;color:var(--v);margin:2px 0 8px">'+stars(x.rating)+(x.title?' · '+esc(x.author_name):'')+(x.is_hidden?' · скрыт после жалоб':'')+'</div>'+
             (x.body?'<div style="font-size:14px;line-height:1.45;color:var(--v)">'+esc(x.body)+'</div>':'')+
             (x.reply?'<div class="reply"><div style="font-size:13px;font-weight:600">Ваш ответ</div><div class="muted" style="font-size:13px">'+esc(x.reply)+'</div></div>':'')+
             '<button type="button" class="link" data-reply="'+x.id+'" style="margin-top:10px;font-size:14px">'+(x.reply?'Изменить ответ':'Ответить')+'</button></div>';
@@ -157,19 +158,14 @@ function cabView(){
   }).catch(function(e){ if(view===v) app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1><div class="empty">'+esc(errText(e))+'</div>'; });
 }
 function settingsBlock(hasProfile){
+  var chev = '<span class="muted">'+svg('M9 6l6 6-6 6',18,2)+'</span>';
   return '<div class="group">'+
-    (hasProfile?'<button type="button" class="opt grow" id="editP" style="padding-right:16px">Изменить профиль<span class="muted">'+svg('M9 6l6 6-6 6',18,2)+'</span></button>':'')+
-    '<button type="button" class="opt grow" id="outB" style="padding-right:16px">Выйти</button>'+
-    '<button type="button" class="opt grow" id="delB" style="padding-right:16px;color:var(--dg)">Удалить аккаунт</button></div>';
+    (hasProfile?'<button type="button" class="opt grow" id="editP" style="padding-right:16px">Изменить профиль'+chev+'</button>':'')+
+    '<button type="button" class="opt grow" id="setB" style="padding-right:16px">Настройки'+chev+'</button></div>';
 }
 function bindSettings(p){
   var e = document.getElementById('editP'); if(e) e.onclick = function(){ go({name:'profEdit', p:p}); };
-  document.getElementById('outB').onclick = function(){ sb.auth.signOut().then(function(){ toast('Вы вышли'); render(); }); };
-  document.getElementById('delB').onclick = function(){
-    confirmSheet('Удалить аккаунт?', 'Профиль сразу перестанет показываться, а через 7 дней аккаунт удалится окончательно. Отзывы о мастерах, которые вы оставили, останутся без имени. До этого срока удаление можно отменить в кабинете.', 'Удалить аккаунт', function(){
-      sb.rpc('request_account_deletion').then(function(r){ if(r.error) return toast(errText(r.error)); return sb.auth.signOut().then(function(){ toast('Аккаунт будет удалён через 7 дней'); render(); }); });
-    });
-  };
+  document.getElementById('setB').onclick = function(){ go({name:'settings', from:'Кабинет', tab:'cab'}); };
 }
 
 /* ---------- профиль мастера: создание и правка ---------- */
@@ -231,33 +227,128 @@ function shrink(file){
 }
 function photoUrl(path){ return SB_URL+'/storage/v1/object/public/photos/'+path; }
 
-function sphereView(){
-  var v = view;
-  if(v.isNew){
-    var cats = S.cats;
-    app.innerHTML =
-      '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">Новое направление</span><span style="width:60px"></span></div>'+
-      '<form id="nf" style="display:flex;flex-direction:column;gap:18px">'+
-      '<label class="field"><span>Сфера деятельности</span><select id="nc" class="inp">'+cats.map(function(c){ return '<option value="'+c.id+'">'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
-      '<label class="field"><span>Как назвать направление</span><input id="nt" class="inp" maxlength="60" required value="'+esc(cats[0]?cats[0].name:'')+'"></label>'+
-      '<label class="field"><span>Коротко о работе</span><textarea id="nd" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете"></textarea></label>'+
-      '<button type="submit" class="btn pr" id="ns">Дальше: услуги и фото</button>'+
-      '<div class="muted" style="font-size:13px;line-height:1.45">Направление сохранится черновиком. Опубликовать можно после того, как добавите услуги.</div></form>';
-    document.getElementById('bk').onclick = back;
-    var nc = document.getElementById('nc'), nt = document.getElementById('nt'), touched = false;
-    nt.addEventListener('input', function(){ touched = true; });
-    nc.addEventListener('change', function(){ if(!touched) nt.value = catById(Number(nc.value)).name; });
-    document.getElementById('nf').addEventListener('submit', function(e){
-      e.preventDefault();
-      var t = nt.value.trim(); if(t.length<2) return toast('Название — не короче 2 букв');
-      var b = document.getElementById('ns'); b.disabled = true;
-      sb.from('spheres').insert({profile_id:uid(), category_id:Number(nc.value), title:t, description:document.getElementById('nd').value.trim()||null}).select('id').single().then(function(r){
-        if(r.error){ b.disabled=false; return toast(dbMsg(r.error)||'Не получилось сохранить'); }
-        view = {name:'sphere', id:r.data.id}; render(); window.scrollTo(0,0);
+/* Загрузка фото по одному: уменьшаем, кладём в хранилище, записываем в базу */
+function uploadPhotos(sphereId, files, sort, onStep){
+  return files.reduce(function(chain, f, i){
+    return chain.then(function(){
+      return shrink(f).then(function(blob){
+        var path = uid()+'/'+sphereId+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
+        return sb.storage.from('photos').upload(path, blob, {contentType:'image/jpeg'}).then(function(up){
+          if(up.error) throw up.error;
+          return sb.from('photos').insert({sphere_id:sphereId, storage_path:path, sort: sort+i+1}).then(function(r){
+            if(r.error){ sb.storage.from('photos').remove([path]); throw r.error; }
+            if(onStep) onStep(i+1);
+          });
+        });
       });
+    });
+  }, Promise.resolve());
+}
+
+/* Новое направление: всё на одном экране, в базу пишем только при публикации или сохранении черновика */
+function sphereNewView(v){
+  var d = v.d = v.d || {cat: S.cats[0] && S.cats[0].id, desc:'', svs:[], files:[]};
+  if(!v.lim){
+    app.innerHTML = '<div class="skel" style="height:44px"></div><div class="skel" style="height:300px"></div>';
+    Promise.all([sb.rpc('profile_limits',{p_profile:uid()}), sb.from('profiles').select('pro_until').eq('id', uid()).maybeSingle()]).then(function(r){
+      if(view!==v) return;
+      v.lim = (r[0].data && r[0].data[0]) || {services_per_sphere:5, photos_per_sphere:10};
+      v.pro = !!(r[1].data && r[1].data.pro_until && new Date(r[1].data.pro_until) > new Date());
+      sphereNewView(v);
     });
     return;
   }
+  var svLimit = v.lim.services_per_sphere, phLimit = v.lim.photos_per_sphere, pro = v.pro;
+  d.files.forEach(function(f){ if(!f.url) f.url = URL.createObjectURL(f.file); });
+  app.innerHTML =
+    '<div class="topbar"><button type="button" class="back" id="bk">Отмена</button><span class="ttl">Новое направление</span><span style="width:60px"></span></div>'+
+    '<label class="field"><span>Сфера деятельности</span><select id="ec" class="inp">'+S.cats.map(function(c){ return '<option value="'+c.id+'"'+(c.id===d.cat?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
+    '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(d.desc)+'</textarea></label>'+
+    '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Услуги и цены</span><span class="muted" style="font-size:12px">'+d.svs.length+(svLimit?' из '+svLimit+(pro?'':' · в Про без лимита'):' · без лимита')+'</span></div>'+
+    '<div class="group">'+d.svs.map(function(x, i){
+      return '<div class="grow"><span class="t">'+esc(x.title)+'</span><span class="p">'+price(x)+'</span>'+
+        '<button type="button" class="iconbtn" data-dsv="'+i+'" aria-label="Убрать «'+esc(x.title)+'»">'+svg('M18 6L6 18M6 6l12 12',18,2)+'</button></div>';
+    }).join('')+
+    (!svLimit || d.svs.length < svLimit ?
+    '<form id="af" class="grow" style="flex-wrap:wrap;padding:10px 12px;gap:8px">'+
+      '<input id="as" class="inp" style="height:44px;flex:1 1 100%;background:var(--bg)" maxlength="80" placeholder="Услуга, например «Замена смесителя»">'+
+      '<input id="ap" class="inp" style="height:44px;flex:1 1 90px;background:var(--bg)" inputmode="numeric" placeholder="Цена от, ₽">'+
+      '<input id="au" class="inp" style="height:44px;flex:1 1 120px;background:var(--bg)" maxlength="30" list="units" placeholder="за что">'+
+      '<datalist id="units"><option value="за час"><option value="за м²"><option value="за шт."><option value="за выезд"><option value="за машину"><option value="договорная"></datalist>'+
+      '<button type="submit" class="chip" aria-pressed="true" style="height:44px;flex:1 1 100%;font-weight:600">Добавить услугу</button></form>' : '')+
+    '</div><div class="muted" style="font-size:12px;margin:6px 4px 0">По названиям услуг вас найдут в поиске — например, по слову «бойлер».</div></section>'+
+    '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Фото работ</span><span class="muted" style="font-size:12px">'+d.files.length+' из '+phLimit+(pro?'':' · в Про до 30')+'</span></div>'+
+    '<div class="pgrid">'+
+      (d.files.length<phLimit?'<label class="cell add" for="pf">'+svg('M12 5v14M5 12h14',26,1.8)+'<span>Добавить</span></label>':'')+
+      d.files.map(function(x, i){ return '<div class="cell"><img alt="Фото работы" src="'+x.url+'"><button type="button" class="del" data-dph="'+i+'" aria-label="Убрать фото">'+svg('M18 6L6 18M6 6l12 12',16,2.2)+'</button></div>'; }).join('')+
+    '</div><input id="pf" type="file" accept="image/*" multiple hidden></section>'+
+    '<div class="muted" style="font-size:13px;line-height:1.45">Карточка будет видна 30 дней. За 2–3 дня до конца напомним продлить.</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px">'+
+      '<button type="button" class="btn pr" id="pub">Опубликовать</button>'+
+      '<button type="button" class="btn" id="draft" style="height:48px;font-size:15px;font-weight:500">Сохранить черновик</button></div>';
+
+  var ec = document.getElementById('ec'), ed = document.getElementById('ed');
+  ec.addEventListener('change', function(){ d.cat = Number(ec.value); });
+  ed.addEventListener('input', function(){ d.desc = ed.value; });
+  document.getElementById('bk').onclick = function(){
+    if(!d.svs.length && !d.files.length && !d.desc.trim()) return back();
+    confirmSheet('Выйти без сохранения?', 'Введённые услуги и фото не сохранятся.', 'Выйти', back);
+  };
+  var af = document.getElementById('af');
+  if(af) af.addEventListener('submit', function(e){
+    e.preventDefault();
+    var t = document.getElementById('as').value.trim(); if(t.length<2) return toast('Напишите название услуги');
+    var pr = document.getElementById('ap').value.replace(/\D/g,''), u = document.getElementById('au').value.trim();
+    d.svs.push({title:t, price_from: pr?Number(pr):null, price_to:null, unit:u||null});
+    sphereNewView(v);
+    var as = document.getElementById('as'); if(as) as.focus({preventScroll:true});
+  });
+  app.querySelectorAll('[data-dsv]').forEach(function(b){ b.onclick = function(){ d.svs.splice(Number(b.getAttribute('data-dsv')),1); sphereNewView(v); }; });
+  app.querySelectorAll('[data-dph]').forEach(function(b){ b.onclick = function(){ var x = d.files.splice(Number(b.getAttribute('data-dph')),1)[0]; if(x && x.url) URL.revokeObjectURL(x.url); sphereNewView(v); }; });
+  var pf = document.getElementById('pf');
+  pf.addEventListener('change', function(){
+    Array.prototype.slice.call(pf.files||[]).slice(0, Math.max(0, phLimit - d.files.length)).forEach(function(f){ d.files.push({file:f}); });
+    sphereNewView(v);
+  });
+
+  function save(publish){
+    if(publish && !d.svs.length) return toast('Добавьте хотя бы одну услугу — по ним вас найдут в поиске');
+    var pb = document.getElementById('pub'), db = document.getElementById('draft');
+    pb.disabled = db.disabled = true; (publish?pb:db).textContent = 'Сохраняем…';
+    var sid = null;
+    sb.from('spheres').insert({profile_id:uid(), category_id:d.cat, title:catById(d.cat).name, description:d.desc.trim()||null}).select('id').single()
+      .then(function(r){
+        if(r.error) throw r.error; sid = r.data.id;
+        if(!d.svs.length) return;
+        return sb.from('services').insert(d.svs.map(function(x, i){ return {sphere_id:sid, title:x.title, price_from:x.price_from, unit:x.unit, sort:i+1}; }))
+          .then(function(r2){ if(r2.error) throw r2.error; });
+      })
+      .then(function(){
+        if(!d.files.length) return;
+        return uploadPhotos(sid, d.files.map(function(x){return x.file;}), 0, function(n){ (publish?pb:db).textContent = 'Фото '+n+' из '+d.files.length+'…'; });
+      })
+      .then(function(){
+        if(!publish) return;
+        return sb.rpc('publish_sphere',{p_sphere:sid}).then(function(r){ if(r.error) throw r.error; });
+      })
+      .then(function(){
+        d.files.forEach(function(x){ if(x.url) URL.revokeObjectURL(x.url); });
+        toast(publish ? 'Опубликовано на 30 дней' : 'Черновик сохранён');
+        S.stack = []; go({name:'cab'}, false);
+      })
+      .catch(function(err){
+        toast(dbMsg(err) || 'Не получилось сохранить');
+        if(sid){ S.stack = [{name:'cab'}]; view = {name:'sphere', id:sid}; render(); window.scrollTo(0,0); }
+        else { pb.disabled = db.disabled = false; pb.textContent = 'Опубликовать'; db.textContent = 'Сохранить черновик'; }
+      });
+  }
+  document.getElementById('pub').onclick = function(){ save(true); };
+  document.getElementById('draft').onclick = function(){ save(false); };
+}
+
+function sphereView(){
+  var v = view;
+  if(v.isNew) return sphereNewView(v);
   app.innerHTML = '<div class="skel" style="height:44px"></div><div class="skel" style="height:200px"></div>';
   Promise.all([
     sb.from('spheres').select('id,title,description,category_id,status,expires_at,services(id,title,price_from,price_to,unit,sort,is_hidden),photos(id,storage_path,sort,is_hidden)').eq('id', v.id).maybeSingle(),
@@ -277,9 +368,7 @@ function sphereView(){
       '<div style="font-size:14px;color:'+stt.c+'">'+esc(stt.t)+'</div>'+
       '<form id="ef" style="display:flex;flex-direction:column;gap:14px">'+
       '<label class="field"><span>Сфера деятельности</span><select id="ec" class="inp">'+S.cats.map(function(c){ return '<option value="'+c.id+'"'+(c.id===s.category_id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
-      '<label class="field"><span>Название</span><input id="et" class="inp" maxlength="60" value="'+esc(s.title)+'"></label>'+
-      '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(s.description||'')+'</textarea></label>'+
-      '<button type="submit" class="btn sec" id="es" style="height:46px;font-size:15px">Сохранить описание</button></form>'+
+      '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(s.description||'')+'</textarea></label></form>'+
       '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Услуги и цены</span><span class="muted" style="font-size:12px">'+svs.length+(svLimit?' из '+svLimit+(pro?'':' · в Про без лимита'):' · без лимита')+'</span></div>'+
       '<div class="group">'+svs.map(function(x){
         return '<div class="grow"><span class="t">'+esc(x.title)+(x.is_hidden?' <span class="muted" style="font-size:12px">(скрыта: лимит)</span>':'')+'</span><span class="p">'+price(x)+'</span>'+
@@ -306,12 +395,15 @@ function sphereView(){
     function reload(msg){ if(msg) toast(msg); sphereView(); }
     document.getElementById('bk').onclick = function(){ S.stack=[]; go({name:'cab'}, false); };
     var ec = document.getElementById('ec');
-    document.getElementById('ef').addEventListener('submit', function(e){
-      e.preventDefault();
-      var t = document.getElementById('et').value.trim(); if(t.length<2) return toast('Название — не короче 2 букв');
-      sb.from('spheres').update({category_id:Number(ec.value), title:t, description:document.getElementById('ed').value.trim()||null}).eq('id', s.id)
-        .then(function(r){ if(r.error) return toast(dbMsg(r.error)); toast('Сохранено'); });
-    });
+    var ed = document.getElementById('ed');
+    function saveMain(){
+      var cat = Number(ec.value), d = ed.value.trim()||null;
+      if(cat===s.category_id && d===(s.description||null)) return;
+      sb.from('spheres').update({category_id:cat, title:catById(cat).name, description:d}).eq('id', s.id)
+        .then(function(r){ if(r.error) return toast(dbMsg(r.error)); s.category_id=cat; s.description=d; toast('Сохранено'); });
+    }
+    ec.addEventListener('change', saveMain); ed.addEventListener('change', saveMain);
+    document.getElementById('ef').addEventListener('submit', function(e){ e.preventDefault(); saveMain(); });
     document.getElementById('af').addEventListener('submit', function(e){
       e.preventDefault();
       var t = document.getElementById('as').value.trim(); if(t.length<2) return toast('Напишите название услуги');
@@ -373,47 +465,66 @@ function sphereView(){
 
 /* ---------- отзыв, жалоба, ответ на отзыв ---------- */
 var RATE_LBL = ['Плохо','Так себе','Нормально','Хорошо','Отлично'];
+function whoBlock(p, line){
+  return '<div class="who"><span class="ava" style="background:'+avColor(p.id)+'">'+esc(initials(p.display_name))+'</span>'+
+    '<span class="stack"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px" id="whoLine">'+(line||'&nbsp;')+'</span></span></div>';
+}
 function reviewSheet(p){
-  var rate = 5;
+  var rate = 0;
   var starSvg = function(on){ return '<svg width="38" height="38" viewBox="0 0 24 24" fill="'+(on?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"></path></svg>'; };
   function starsHtml(){ return [1,2,3,4,5].map(function(n){ return '<button type="button" role="radio" aria-checked="'+(n===rate)+'" aria-label="'+n+' из 5" data-r="'+n+'" class="'+(n<=rate?'on':'')+'">'+starSvg(n<=rate)+'</button>'; }).join(''); }
-  openSheet('<h2>Отзыв: '+esc(p.display_name)+'</h2>'+
-    '<div style="text-align:center;margin:6px 0 14px"><div class="stars" role="radiogroup" aria-label="Оценка" id="st">'+starsHtml()+'</div><div class="muted" id="stl" style="margin-top:4px">'+RATE_LBL[rate-1]+'</div></div>'+
-    '<form id="rf2" style="display:flex;flex-direction:column;gap:14px">'+
-    '<label class="field"><span>Ваше имя</span><input id="rn" class="inp" maxlength="40" required value="'+esc(store('ub_name')||'')+'" placeholder="Как подписать отзыв"></label>'+
-    '<label class="field"><span>Отзыв</span><textarea id="rt" class="inp" maxlength="1000" placeholder="Что делал мастер, уложился ли в срок и цену"></textarea></label>'+
-    '<p style="margin:0;font-size:13px">Один отзыв на мастера. Мастер сможет ответить, но не удалить его.</p>'+
+  openScreen(scrTop('<button type="button" class="back" data-close>Отмена</button>', 'Отзыв', '')+
+    '<form id="rf2" class="scr-body">'+
+    whoBlock(p)+
+    '<div style="text-align:center;margin-top:8px"><div style="font-size:20px;font-weight:700;margin-bottom:8px" id="stQ">Как всё прошло?</div>'+
+      '<div class="stars" role="radiogroup" aria-labelledby="stQ" id="st">'+starsHtml()+'</div><div class="muted" id="stl" style="margin-top:4px;min-height:20px"></div></div>'+
+    '<label class="field"><span>Коротко</span><input id="rh" class="inp" maxlength="80" placeholder="Например: быстро и чисто"></label>'+
+    '<label class="field"><span>Подробнее</span><textarea id="rt" class="inp" maxlength="1000" placeholder="Что делал мастер, уложился ли в срок и цену"></textarea></label>'+
+    '<label class="field"><span>Как подписать отзыв</span><input id="rn" class="inp" maxlength="40" value="'+esc(store('ub_name')||'')+'" placeholder="Ваше имя"></label>'+
+    '<div class="muted" style="font-size:13px;line-height:1.45">Отзыв можно оставить в течение 30 дней после звонка — один на мастера. Мастер сможет ответить, но не удалить его.</div>'+
+    '<div class="spacer"></div>'+
     '<button type="submit" class="btn pr" id="rs">Опубликовать отзыв</button></form>',
   function(){
+    // Когда заказчик звонил или писал мастеру — из журнала контактов
+    sb.from('contact_events').select('kind,created_at').eq('customer_id', uid()).eq('profile_id', p.id).order('created_at',{ascending:false}).limit(1).then(function(r){
+      var x = r.data && r.data[0], el = document.getElementById('whoLine');
+      if(x && el) el.textContent = (x.kind==='message'?'Вы писали ':'Вы звонили ')+dmy(x.created_at);
+    });
     var st = document.getElementById('st');
     st.addEventListener('click', function(e){ var b=e.target.closest('[data-r]'); if(!b) return; rate=Number(b.getAttribute('data-r')); st.innerHTML=starsHtml(); document.getElementById('stl').textContent=RATE_LBL[rate-1]; });
     document.getElementById('rf2').addEventListener('submit', function(e){
       e.preventDefault();
-      var name = document.getElementById('rn').value.trim(); if(!name) return toast('Укажите имя');
+      if(!rate) return toast('Поставьте оценку');
+      var name = document.getElementById('rn').value.trim(); if(!name) return toast('Укажите, как подписать отзыв');
       var btn = document.getElementById('rs'); btn.disabled = true;
-      sb.from('reviews').insert({profile_id:p.id, author_name:name, rating:rate, body:document.getElementById('rt').value.trim()||null}).then(function(r){
+      sb.from('reviews').insert({profile_id:p.id, author_name:name, rating:rate, title:document.getElementById('rh').value.trim()||null, body:document.getElementById('rt').value.trim()||null}).then(function(r){
         if(r.error){ btn.disabled=false; return toast(dbMsg(r.error) || 'Вы уже оставили отзыв этому мастеру'); }
-        store('ub_name', name); closeSheet(); toast('Спасибо за отзыв!'); if(view.name==='profile') profileView();
+        store('ub_name', name); closeScreen(); toast('Спасибо за отзыв!'); if(view.name==='profile') profileView();
       });
     });
   });
 }
 var REASONS = [['prepayment','Просил предоплату'],['fraud','Не пришёл или обманул'],['rude','Грубость, оскорбления'],['fake','Чужие фото или неправда в профиле'],['spam','Спам или реклама'],['other','Другое']];
 function complaintSheet(p){
-  var cur = 'prepayment';
+  var cur = '';
   function list(){ return REASONS.map(function(x){ return '<button type="button" class="radio" role="radio" aria-checked="'+(x[0]===cur)+'" data-c="'+x[0]+'"><span class="r"></span>'+x[1]+'</button>'; }).join(''); }
-  openSheet('<h2>Жалоба</h2><p>На '+esc(p.display_name)+'. Мастер не узнает, кто пожаловался. Если жалобы приходят от нескольких разных людей, профиль скрывается.</p>'+
-    '<div class="group" role="radiogroup" aria-label="Причина" id="rl" style="margin-bottom:14px">'+list()+'</div>'+
-    '<label class="field" style="margin-bottom:14px"><span>Подробности (необязательно)</span><textarea id="ct" class="inp" maxlength="500" placeholder="Опишите, что произошло"></textarea></label>'+
-    '<button type="button" class="btn dg" id="cs">Отправить жалобу</button>',
+  openScreen(scrTop('<button type="button" class="back" data-close>Отмена</button>', 'Жалоба', '')+
+    '<div class="scr-body">'+
+    '<div><h1 class="lg-h">Что случилось?</h1><div class="muted" style="font-size:15px;margin-top:4px">Мастер: '+esc(p.display_name)+'</div></div>'+
+    '<div class="group" role="radiogroup" aria-label="Причина" id="rl">'+list()+'</div>'+
+    '<label class="field"><span>Подробности</span><textarea id="ct" class="inp" maxlength="500" placeholder="Опишите, что произошло (необязательно)"></textarea></label>'+
+    '<div class="muted" style="font-size:13px;line-height:1.45">Мастер не узнает, кто пожаловался. Если жалобы приходят от нескольких разных людей, профиль скрывается до проверки.</div>'+
+    '<div class="spacer"></div>'+
+    '<button type="button" class="btn dg" id="cs">Отправить жалобу</button></div>',
   function(){
     var rl = document.getElementById('rl');
     rl.addEventListener('click', function(e){ var b=e.target.closest('[data-c]'); if(!b) return; cur=b.getAttribute('data-c'); rl.innerHTML=list(); });
     document.getElementById('cs').onclick = function(){
+      if(!cur) return toast('Выберите, что случилось');
       var b = document.getElementById('cs'); b.disabled = true;
       sb.from('complaints').insert({target_type:'profile', target_id:p.id, reason:cur, comment:document.getElementById('ct').value.trim()||null}).then(function(r){
         if(r.error){ b.disabled=false; return toast(dbMsg(r.error) || 'Вы уже отправляли жалобу на этого мастера'); }
-        closeSheet(); toast('Жалоба отправлена. Спасибо!');
+        closeScreen(); toast('Жалоба отправлена. Спасибо!');
       });
     };
   });

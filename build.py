@@ -10,7 +10,7 @@ if not os.path.exists(lib_path):
     with tarfile.open(os.path.join(ROOT, 'vendor', f'supabase-supabase-js-{VER}.tgz')) as t:
         t.extractall(os.path.join(ROOT, 'vendor'))
 rd = lambda p: open(os.path.join(ROOT, p), encoding='utf8').read()
-src = rd('src/app.html').replace('/*CABINET*/', rd('src/cabinet.js')).replace('/*LOGIN*/', rd('src/login.js'))
+src = rd('src/app.html').replace('/*CABINET*/', rd('src/cabinet.js')).replace('/*LOGIN*/', rd('src/login.js')).replace('/*SETTINGS*/', rd('src/settings.js'))
 lib = open(lib_path, encoding='utf8').read()
 # UMD-сборка не умеет работать встроенной в страницу — чиним определение publicPath
 old = 'if(!e)throw new Error("Automatic publicPath is not supported in this browser");'
