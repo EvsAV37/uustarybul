@@ -9,7 +9,13 @@
 //   ZVONOK_CAMPAIGN_CALLBACK — кампания «позвоните на номер» (запасной способ, можно не задавать)
 //   DISABLE_TEST_LOGINS=1    — выключить тестовые номера (обязательно перед запуском)
 //
-// Действия: start, confirm, start_fallback, check_fallback.
+// Действия: start, confirm, start_fallback, check_fallback;
+// challenge (задачка для телефона), guest (проверка гостя перед первым номером мастера).
+//
+// Защита от ботов (13.10.2026): «задачка для телефона» (proof-of-work в формате ALTCHA:
+// найти number, при котором sha256(salt + number) = challenge) нужна для start, start_fallback
+// и guest; одна задачка — одно действие. Плюс лимиты по IP (хеш): звонки 15/час, гости 20/час.
+// Ключ подписи задачек выводится из ключа сервиса — настраивать ничего не нужно.
 // После подтверждения возвращает token_hash — браузер обменивает его на сессию
 // через supabase.auth.verifyOtp({ token_hash, type: 'magiclink' }).
 
@@ -26,6 +32,38 @@ const TEST_LOGINS: Record<string, string> = {
   '70000000001': '1234', '70000000002': '1234', '70000000003': '1234'
 };
 const EMAIL_DOMAIN = 'phone.uustarybul.ru';
+
+const POW_MAX = 400000;          // сложность: телефон перебирает в среднем 200 тыс. вариантов
+const POW_TTL = 10 * 60;         // задачка живёт 10 минут
+const enc = new TextEncoder();
+const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+async function sha256(s: string) { return hex(await crypto.subtle.digest('SHA-256', enc.encode(s))); }
+let hmacKey: CryptoKey | null = null;
+async function sign(s: string) {
+  if (!hmacKey) {
+    const raw = await crypto.subtle.digest('SHA-256', enc.encode('uustarybul-pow:' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')));
+    hmacKey = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  }
+  return hex(await crypto.subtle.sign('HMAC', hmacKey, enc.encode(s)));
+}
+async function newChallenge() {
+  const rnd = hex(crypto.getRandomValues(new Uint8Array(12)).buffer);
+  const salt = `${rnd}?expires=${Math.floor(Date.now() / 1000) + POW_TTL}`;
+  const number = crypto.getRandomValues(new Uint32Array(1))[0] % (POW_MAX + 1);
+  const challenge = await sha256(salt + number);
+  return { algorithm: 'SHA-256', challenge, maxnumber: POW_MAX, salt, signature: await sign(challenge) };
+}
+// Решение верно и не просрочено → challenge (для учёта «одна задачка — одно действие»), иначе null
+async function checkPow(p: any): Promise<string | null> {
+  if (!p || typeof p.salt !== 'string' || typeof p.challenge !== 'string' || typeof p.signature !== 'string') return null;
+  const exp = Number((p.salt.match(/[?&]expires=(\d+)/) || [])[1]);
+  if (!exp || exp < Date.now() / 1000) return null;
+  const n = Number(p.number);
+  if (!Number.isInteger(n) || n < 0 || n > POW_MAX) return null;
+  if ((await sha256(p.salt + n)) !== p.challenge) return null;
+  if ((await sign(p.challenge)) !== p.signature) return null;
+  return p.challenge;
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
@@ -70,6 +108,28 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || '');
+    const ipHash = (await sha256('uustarybul-ip:' + ip + ':' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))).slice(0, 32);
+
+    // Задачка, лимит по IP; null — можно, иначе текст ошибки
+    async function botGuard(kind: 'call' | 'guest'): Promise<string | null> {
+      const ch = await checkPow(body.pow);
+      if (!ch) return 'pow_failed';
+      const { data, error } = await admin.rpc('guard_take', { p_kind: kind, p_ip_hash: ipHash, p_challenge: ch });
+      if (error) throw new Error('guard failed: ' + error.message);
+      return (data as string) || null;
+    }
+
+    if (action === 'challenge') return json({ ok: true, ...(await newChallenge()) });
+
+    if (action === 'guest') {
+      if (!user?.is_anonymous) return fail('Проверка нужна только гостям');
+      const g = await botGuard('guest');
+      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
+      const { error } = await admin.rpc('guest_mark', { p_uid: user.id });
+      if (error) throw new Error('guest mark failed: ' + error.message);
+      return json({ ok: true });
+    }
+
     const phone = normalizePhone(body.phone);
     if (!phone) return fail('Введите номер полностью, 10 цифр после +7');
     const isTest = !!TEST_LOGINS[phone] && Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
@@ -121,6 +181,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'start') {
+      const g = await botGuard('call');
+      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
       const limit = await guard('flash');
       if (limit) return fail(limit, 429);
       let pincode: string;
@@ -157,6 +219,8 @@ Deno.serve(async (req) => {
 
     if (action === 'start_fallback') {
       if (!key || !callback) return fail('Запасной способ пока не настроен', 503);
+      const g = await botGuard('call');
+      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
       const limit = await guard('callback');
       if (limit) return fail(limit, 429);
       const z = await zvonok('phones/confirm', { campaign_id: callback, phone: '+' + phone, public_key: key });

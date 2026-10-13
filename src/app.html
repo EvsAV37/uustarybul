@@ -366,6 +366,7 @@ function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; 
 function errText(e){
   var m = (e && (e.message||e.error_description)) || '';
   if(/daily_limit/.test(m)) return 'Лимит номеров на сегодня исчерпан. Попробуйте завтра.';
+  if(/guest_check_required/.test(m)) return 'Не получилось проверить устройство. Попробуйте ещё раз.';
   if(/anonymous/i.test(m) && /disabled/i.test(m)) return 'Гостевой вход пока выключен в настройках Supabase.';
   if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Нет связи с сервером. Проверьте интернет.';
   return 'Не получилось: '+(m||'неизвестная ошибка');
@@ -850,18 +851,26 @@ function contact(pid, sid, kind){
   if(!S.session) return openSheet('<h2>Как связаться с мастером</h2><p>Чтобы увидеть номер, войдите по номеру телефона или продолжите как гость. Гость может посмотреть до 20 номеров в день.</p>'+
     '<button type="button" class="btn pr" id="guestBtn">Продолжить как гость</button><button type="button" class="btn sec" id="lgBtn" style="margin-top:10px">Войти по номеру</button>',
     function(){
+      powPrefetch().catch(function(){});
       document.getElementById('lgBtn').onclick = function(){ loginSheet(function(){ contact(pid, sid, kind); }); };
       var g = document.getElementById('guestBtn');
       g.onclick = function(){
         g.disabled=true; g.textContent='Входим…';
+        var back = function(m){ g.disabled=false; g.textContent='Продолжить как гость'; toast(m); };
         sb.auth.signInAnonymously().then(function(r){
-          if(r.error){ g.disabled=false; g.textContent='Продолжить как гость'; return toast(errText(r.error)); }
-          S.session = r.data.session; contact(pid, sid, kind);
+          if(r.error) return back(errText(r.error));
+          S.session = r.data.session;
+          guestCheck().then(function(){ contact(pid, sid, kind); }, function(e){ back(e.message); });
         });
       };
     });
   openSheet('<h2>Номер мастера</h2><div class="skel" style="height:36px;width:70%;margin:10px 0 20px"></div>');
   sb.rpc('get_contact',{p_profile:pid, p_sphere:sid||null, p_kind:kind}).then(function(r){
+    // Гость без проверки (вошёл до появления защиты) — проверяем и пробуем ещё раз
+    if(r.error && /guest_check_required/.test(r.error.message) && !contact.checked){
+      contact.checked = true;
+      return guestCheck().then(function(){ contact(pid, sid, kind); }, function(e){ closeSheet(); toast(e.message); });
+    }
     if(r.error){ closeSheet(); return toast(errText(r.error)); }
     var ph = String(r.data||''); var digits = ph.replace(/\D/g,''); if(digits.length===11&&digits[0]==='8') digits='7'+digits.slice(1);
     var pretty = digits.length===11 ? '+7 '+digits.slice(1,4)+' '+digits.slice(4,7)+'-'+digits.slice(7,9)+'-'+digits.slice(9) : ph;
