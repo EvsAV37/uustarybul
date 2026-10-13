@@ -206,9 +206,10 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
 /* заставка при запуске (совпадает с картинкой запуска iPhone) */
 #splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;transition:opacity .35s ease}
-/* знак стоит точно как на картинке запуска iPhone: ширина 42%, центр на 47% высоты — иначе при смене двоится */
-#splash img{position:absolute;left:50%;top:47%;width:min(42vw,240px);height:auto;transform:translate(-50%,-50%)}
-#splash .sp-name{position:absolute;left:0;right:0;top:calc(47% + min(15.4vw,88px) + 18px);text-align:center;color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .5s .15s ease-out both}
+/* знак стоит точно как на картинке запуска iPhone: ширина 42%, центр на 47% высоты ВСЕГО экрана.
+   В установленном приложении страница начинается под полоской часов (--sp-off), поэтому поднимаем знак на эту величину — иначе при смене двоится */
+#splash img{position:absolute;left:50%;top:calc(47% - var(--sp-off,0px) * .53);width:min(42vw,240px);height:auto;transform:translate(-50%,-50%)}
+#splash .sp-name{position:absolute;left:0;right:0;top:calc(47% - var(--sp-off,0px) * .53 + min(15.4vw,88px) + 18px);text-align:center;color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .5s .15s ease-out both}
 #splash.out{opacity:0;pointer-events:none}
 @keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#splash .sp-name{animation:none}}
@@ -229,6 +230,7 @@ ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;displa
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="icons/logo-mark.webp" alt="" width="480" height="352"><div class="sp-name">Уустары бул</div></div>
+<script>(function(){var o=0;try{if((navigator.standalone||matchMedia("(display-mode: standalone)").matches)&&screen.height>innerHeight&&screen.height-innerHeight<120)o=screen.height-innerHeight}catch(e){}document.getElementById("splash").style.setProperty("--sp-off",o+"px")})()</script>
 <main id="app" class="app" aria-live="polite"></main>
 <nav class="tabs" aria-label="Разделы"><div class="in" id="tabs"></div></nav>
 <div id="toast" class="toast" hidden></div>
