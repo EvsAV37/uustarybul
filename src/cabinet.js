@@ -22,6 +22,33 @@ function dbMsg(e){
   return errText(e);
 }
 function catById(id){ return S.cats.find(function(c){return c.id===id;}) || {name:'',slug:''}; }
+/* Выбор сферы деятельности: профессии по группам */
+function catSelect(sel){
+  var html = sel ? '' : '<option value="" selected disabled>Выберите</option>', grp = null;
+  S.cats.forEach(function(c){
+    if(c.grp!==grp){ if(grp!==null) html += '</optgroup>'; grp = c.grp; html += '<optgroup label="'+esc(grp||'Другое')+'">'; }
+    html += '<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>';
+  });
+  return '<select id="ec" class="inp">'+html+(grp!==null?'</optgroup>':'')+'</select>';
+}
+/* Подсказки формы услуг — свои у каждой сферы */
+function svcHints(id){
+  var c = catById(id);
+  return { svc: c.hint_service ? 'Услуга, например «'+c.hint_service+'»' : 'Название услуги',
+           word: (c.hint_query||'ремонт').split(' или ')[0],
+           unit: c.hint_unit || '' };
+}
+function unitList(h){
+  var u = ['за час','за м²','за шт.','за выезд','за машину','договорная'];
+  if(h.unit && u.indexOf(h.unit)<0) u.unshift(h.unit);
+  return '<datalist id="units">'+u.map(function(x){ return '<option value="'+esc(x)+'">'; }).join('')+'</datalist>';
+}
+function applyHints(id){
+  var h = svcHints(id), as = document.getElementById('as'), hw = document.getElementById('hw'), dl = document.getElementById('units');
+  if(as) as.placeholder = h.svc;
+  if(hw) hw.textContent = h.word;
+  if(dl) dl.outerHTML = unitList(h);
+}
 function confirmSheet(title, text, label, onOk){
   openSheet('<h2>'+esc(title)+'</h2><p>'+esc(text)+'</p><button type="button" class="btn dg" id="ok">'+esc(label)+'</button><button type="button" class="btn" data-close style="margin-top:6px">Отмена</button>',
     function(){ document.getElementById('ok').onclick = function(){ closeSheet(); onOk(); }; });
@@ -247,7 +274,7 @@ function uploadPhotos(sphereId, files, sort, onStep){
 
 /* Новое направление: всё на одном экране, в базу пишем только при публикации или сохранении черновика */
 function sphereNewView(v){
-  var d = v.d = v.d || {cat: S.cats[0] && S.cats[0].id, desc:'', svs:[], files:[]};
+  var d = v.d = v.d || {cat: null, desc:'', svs:[], files:[]};
   if(!v.lim){
     app.innerHTML = '<div class="skel" style="height:44px"></div><div class="skel" style="height:300px"></div>';
     Promise.all([sb.rpc('profile_limits',{p_profile:uid()}), sb.from('profiles').select('pro_until').eq('id', uid()).maybeSingle()]).then(function(r){
@@ -258,11 +285,11 @@ function sphereNewView(v){
     });
     return;
   }
-  var svLimit = v.lim.services_per_sphere, phLimit = v.lim.photos_per_sphere, pro = v.pro;
+  var svLimit = v.lim.services_per_sphere, phLimit = v.lim.photos_per_sphere, pro = v.pro, h = svcHints(d.cat);
   d.files.forEach(function(f){ if(!f.url) f.url = URL.createObjectURL(f.file); });
   app.innerHTML =
     '<div class="topbar"><button type="button" class="back" id="bk">Отмена</button><span class="ttl">Новое направление</span><span style="width:60px"></span></div>'+
-    '<label class="field"><span>Сфера деятельности</span><select id="ec" class="inp">'+S.cats.map(function(c){ return '<option value="'+c.id+'"'+(c.id===d.cat?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
+    '<label class="field"><span>Сфера деятельности</span>'+catSelect(d.cat)+'</label>'+
     '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(d.desc)+'</textarea></label>'+
     '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Услуги и цены</span><span class="muted" style="font-size:12px">'+d.svs.length+(svLimit?' из '+svLimit+(pro?'':' · в Про без лимита'):' · без лимита')+'</span></div>'+
     '<div class="group">'+d.svs.map(function(x, i){
@@ -271,12 +298,12 @@ function sphereNewView(v){
     }).join('')+
     (!svLimit || d.svs.length < svLimit ?
     '<form id="af" class="grow" style="flex-wrap:wrap;padding:10px 12px;gap:8px">'+
-      '<input id="as" class="inp" style="height:44px;flex:1 1 100%;background:var(--bg)" maxlength="80" placeholder="Услуга, например «Замена смесителя»">'+
+      '<input id="as" class="inp" style="height:44px;flex:1 1 100%;background:var(--bg)" maxlength="80" placeholder="'+esc(h.svc)+'">'+
       '<input id="ap" class="inp" style="height:44px;flex:1 1 90px;background:var(--bg)" inputmode="numeric" placeholder="Цена от, ₽">'+
       '<input id="au" class="inp" style="height:44px;flex:1 1 120px;background:var(--bg)" maxlength="30" list="units" placeholder="за что">'+
-      '<datalist id="units"><option value="за час"><option value="за м²"><option value="за шт."><option value="за выезд"><option value="за машину"><option value="договорная"></datalist>'+
+      unitList(h)+
       '<button type="submit" class="chip" aria-pressed="true" style="height:44px;flex:1 1 100%;font-weight:600">Добавить услугу</button></form>' : '')+
-    '</div><div class="muted" style="font-size:12px;margin:6px 4px 0">По названиям услуг вас найдут в поиске — например, по слову «бойлер».</div></section>'+
+    '</div><div class="muted" style="font-size:12px;margin:6px 4px 0">По названиям услуг вас найдут в поиске — например, по запросу «<span id="hw">'+esc(h.word)+'</span>».</div></section>'+
     '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Фото работ</span><span class="muted" style="font-size:12px">'+d.files.length+' из '+phLimit+(pro?'':' · в Про до 30')+'</span></div>'+
     '<div class="pgrid">'+
       (d.files.length<phLimit?'<label class="cell add" for="pf">'+svg('M12 5v14M5 12h14',26,1.8)+'<span>Добавить</span></label>':'')+
@@ -288,7 +315,7 @@ function sphereNewView(v){
       '<button type="button" class="btn" id="draft" style="height:48px;font-size:15px;font-weight:500">Сохранить черновик</button></div>';
 
   var ec = document.getElementById('ec'), ed = document.getElementById('ed');
-  ec.addEventListener('change', function(){ d.cat = Number(ec.value); });
+  ec.addEventListener('change', function(){ d.cat = Number(ec.value); applyHints(d.cat); });
   ed.addEventListener('input', function(){ d.desc = ed.value; });
   document.getElementById('bk').onclick = function(){
     if(!d.svs.length && !d.files.length && !d.desc.trim()) return back();
@@ -312,6 +339,7 @@ function sphereNewView(v){
   });
 
   function save(publish){
+    if(!d.cat){ ec.focus(); return toast('Выберите сферу деятельности'); }
     if(publish && !d.svs.length) return toast('Добавьте хотя бы одну услугу — по ним вас найдут в поиске');
     var pb = document.getElementById('pub'), db = document.getElementById('draft');
     pb.disabled = db.disabled = true; (publish?pb:db).textContent = 'Сохраняем…';
@@ -362,12 +390,12 @@ function sphereView(){
     var svs = (s.services||[]).sort(function(a,b){return a.sort-b.sort;});
     var phs = (s.photos||[]).sort(function(a,b){return a.sort-b.sort;});
     var stt = sphereState(s, pro);
-    var svLimit = lim.services_per_sphere, phLimit = lim.photos_per_sphere;
+    var svLimit = lim.services_per_sphere, phLimit = lim.photos_per_sphere, h = svcHints(s.category_id);
     app.innerHTML =
       '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">Направление</span><span style="width:60px"></span></div>'+
       '<div style="font-size:14px;color:'+stt.c+'">'+esc(stt.t)+'</div>'+
       '<form id="ef" style="display:flex;flex-direction:column;gap:14px">'+
-      '<label class="field"><span>Сфера деятельности</span><select id="ec" class="inp">'+S.cats.map(function(c){ return '<option value="'+c.id+'"'+(c.id===s.category_id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
+      '<label class="field"><span>Сфера деятельности</span>'+catSelect(s.category_id)+'</label>'+
       '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(s.description||'')+'</textarea></label></form>'+
       '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Услуги и цены</span><span class="muted" style="font-size:12px">'+svs.length+(svLimit?' из '+svLimit+(pro?'':' · в Про без лимита'):' · без лимита')+'</span></div>'+
       '<div class="group">'+svs.map(function(x){
@@ -375,15 +403,15 @@ function sphereView(){
           '<button type="button" class="iconbtn" data-dsv="'+x.id+'" aria-label="Убрать «'+esc(x.title)+'»">'+svg('M18 6L6 18M6 6l12 12',18,2)+'</button></div>';
       }).join('')+
       '<form id="af" class="grow" style="flex-wrap:wrap;padding:10px 12px;gap:8px">'+
-        '<input id="as" class="inp" style="height:44px;flex:1 1 100%;background:var(--bg)" maxlength="80" placeholder="Услуга, например «Замена смесителя»">'+
+        '<input id="as" class="inp" style="height:44px;flex:1 1 100%;background:var(--bg)" maxlength="80" placeholder="'+esc(h.svc)+'">'+
         '<input id="ap" class="inp" style="height:44px;flex:1 1 90px;background:var(--bg)" inputmode="numeric" placeholder="Цена от, ₽">'+
         '<input id="au" class="inp" style="height:44px;flex:1 1 120px;background:var(--bg)" maxlength="30" list="units" placeholder="за что">'+
-        '<datalist id="units"><option value="за час"><option value="за м²"><option value="за шт."><option value="за выезд"><option value="за машину"><option value="договорная"></datalist>'+
+        unitList(h)+
         '<button type="submit" class="chip" aria-pressed="true" style="height:44px;flex:1 1 100%;font-weight:600">Добавить услугу</button></form>'+
-      '</div><div class="muted" style="font-size:12px;margin:6px 4px 0">По названиям услуг вас найдут в поиске — например, по слову «бойлер».</div></section>'+
-      '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Фото работ</span><span class="muted" style="font-size:12px">'+phs.length+' из '+phLimit+(pro?'':' · в Про до 30')+'</span></div>'+
+      '</div><div class="muted" style="font-size:12px;margin:6px 4px 0">По названиям услуг вас найдут в поиске — например, по запросу «<span id="hw">'+esc(h.word)+'</span>».</div></section>'+
+      '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Фото работ</span><span class="muted" style="font-size:12px"><span id="phn">'+phs.length+'</span> из '+phLimit+(pro?'':' · в Про до 30')+'</span></div>'+
       '<div class="pgrid">'+
-        (phs.length<phLimit?'<label class="cell add" for="pf">'+svg('M12 5v14M5 12h14',26,1.8)+'<span id="pfl">Добавить</span></label>':'')+
+        (phs.length<phLimit?'<label class="cell add" for="pf" id="pfc">'+svg('M12 5v14M5 12h14',26,1.8)+'<span id="pfl">Добавить</span></label>':'')+
         phs.map(function(x){ return '<div class="cell"><img loading="lazy" alt="Фото работы" src="'+photoUrl(esc(x.storage_path))+'"><button type="button" class="del" data-dph="'+x.id+'" aria-label="Удалить фото">'+svg('M18 6L6 18M6 6l12 12',16,2.2)+'</button></div>'; }).join('')+
       '</div><input id="pf" type="file" accept="image/*" multiple hidden></section>'+
       '<div style="display:flex;flex-direction:column;gap:10px">'+
@@ -400,7 +428,7 @@ function sphereView(){
       var cat = Number(ec.value), d = ed.value.trim()||null;
       if(cat===s.category_id && d===(s.description||null)) return;
       sb.from('spheres').update({category_id:cat, title:catById(cat).name, description:d}).eq('id', s.id)
-        .then(function(r){ if(r.error) return toast(dbMsg(r.error)); s.category_id=cat; s.description=d; toast('Сохранено'); });
+        .then(function(r){ if(r.error) return toast(dbMsg(r.error)); s.category_id=cat; s.title=catById(cat).name; s.description=d; applyHints(cat); toast('Сохранено'); });
     }
     ec.addEventListener('change', saveMain); ed.addEventListener('change', saveMain);
     document.getElementById('ef').addEventListener('submit', function(e){ e.preventDefault(); saveMain(); });
@@ -418,17 +446,22 @@ function sphereView(){
     pf.addEventListener('change', function(){
       var files = Array.prototype.slice.call(pf.files||[]).slice(0, Math.max(0, phLimit - phs.length));
       if(!files.length) return;
-      var lbl = document.getElementById('pfl'); var done = 0, sort = phs.length ? phs[phs.length-1].sort : 0;
-      if(lbl) lbl.textContent = 'Загружаем…';
+      var lbl = document.getElementById('pfl'), cell = document.getElementById('pfc'), phn = document.getElementById('phn');
+      var done = 0, sort = phs.length ? phs[phs.length-1].sort : 0;
+      if(cell){ cell.style.pointerEvents = 'none'; cell.style.opacity = '.6'; }
+      pf.disabled = true;
       files.reduce(function(chain, f){
         return chain.then(function(){
+          if(lbl) lbl.textContent = 'Загружаем '+(done+1)+' из '+files.length+'…';
           return shrink(f).then(function(blob){
             var path = uid()+'/'+s.id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
             return sb.storage.from('photos').upload(path, blob, {contentType:'image/jpeg'}).then(function(up){
               if(up.error) throw up.error;
               return sb.from('photos').insert({sphere_id:s.id, storage_path:path, sort: ++sort}).then(function(r){
                 if(r.error){ sb.storage.from('photos').remove([path]); throw r.error; }
-                done++; if(lbl) lbl.textContent = 'Загружено '+done+' из '+files.length;
+                done++;
+                if(phn) phn.textContent = phs.length + done;
+                if(cell){ var im = document.createElement('div'); im.className = 'cell'; im.innerHTML = '<img alt="Фото работы" src="'+photoUrl(esc(path))+'">'; cell.parentNode.appendChild(im); }
               });
             });
           });
