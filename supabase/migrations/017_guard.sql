@@ -102,7 +102,7 @@ begin
   return v_phone;
 end $$;
 
--- Чистка старых записей. Supabase от Claude удаление не принимает — выполнить самому в SQL-редакторе:
+-- Чистка старых записей (Supabase от Claude удаление не принимает) — выполнена пользователем в SQL-редакторе 13.10.2026:
 -- create or replace function public.guard_cleanup()
 -- returns void language sql security definer set search_path = '' as $$
 --   delete from public.pow_used where created_at < now() - interval '1 day';
