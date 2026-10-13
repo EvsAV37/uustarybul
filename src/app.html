@@ -205,13 +205,13 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px;display:flex;align-items:center;gap:12px}
 .logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
 /* заставка при запуске (совпадает с картинкой запуска iPhone) */
-#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .35s ease}
-#splash img{width:42vw;max-width:240px;height:auto;animation:spIn .6s cubic-bezier(.2,.8,.2,1) both}
-#splash .sp-name{color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;height:32px;line-height:32px;animation:spUp .5s .3s ease-out both}
+#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;transition:opacity .35s ease}
+/* знак стоит точно как на картинке запуска iPhone: ширина 42%, центр на 47% высоты — иначе при смене двоится */
+#splash img{position:absolute;left:50%;top:47%;width:min(42vw,240px);height:auto;transform:translate(-50%,-50%)}
+#splash .sp-name{position:absolute;left:0;right:0;top:calc(47% + min(15.4vw,88px) + 18px);text-align:center;color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .5s .15s ease-out both}
 #splash.out{opacity:0;pointer-events:none}
-@keyframes spIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
 @keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){#splash img,#splash .sp-name{animation:none}}
+@media (prefers-reduced-motion:reduce){#splash .sp-name{animation:none}}
 .lg-h{margin:0;font-size:26px;font-weight:700}
 .lg-p{margin:-8px 0 6px;font-size:15px;line-height:1.45;color:var(--mu)}
 .lg-small{margin:0;font-size:12px;line-height:1.45;color:var(--mu);text-align:center}
