@@ -1,0 +1,57 @@
+# Разовая выгрузка из облачного Supabase для переезда на свой сервер.
+# Запускается изменением server/export.request. Забирает схему (миграции 001–017) и демо-данные
+# через временную функцию ub_export() и кладёт их в server/db/001_cloud_schema.sql и 002_cloud_data.sql.
+name: export
+
+on:
+  push:
+    branches: [main]
+    paths: [server/export.request]
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: export
+        run: |
+          KEY=$(grep -o "var SB_KEY = '[^']*'" src/app.html | cut -d"'" -f2)
+          curl -fsS -X POST "https://icojobutpjjvsjkizaak.supabase.co/rest/v1/rpc/ub_export" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{}' -o export.json
+          python3 - <<'PY'
+          import json
+          x = json.load(open('export.json'))
+          with open('server/db/001_cloud_schema.sql', 'w', encoding='utf-8') as f:
+              f.write('-- Схема из облачного Supabase: миграции 001–017 в том виде, в каком они применены там.\n')
+              f.write('-- Выгружено автоматически (export.yml). Не править: исправления — следующими файлами.\n')
+              for m in x['migrations']:
+                  f.write('\n-- ==================== ' + m['name'] + ' ====================\n')
+                  f.write(m['sql'].rstrip() + '\n')
+          with open('server/db/002_cloud_data.sql', 'w', encoding='utf-8') as f:
+              f.write('-- ub:superuser\n')
+              f.write('-- Данные из облачного Supabase: справочники и демо-мастера. Реальные и тестовые пользователи не переносятся.\n')
+              f.write('-- Выгружено автоматически (export.yml).\n')
+              f.write('delete from auth.users where id in (select id from public.profiles where is_demo);\n')
+              f.write('delete from public.search_queries; delete from public.app_settings; delete from public.plan_limits;\n')
+              f.write('delete from public.categories; delete from public.cities;\n')
+              f.write('set local session_replication_role = replica;\n')
+              f.write(x['data_sql'])
+              f.write('set local session_replication_role = origin;\n')
+              f.write("do $$ declare r record; begin\n"
+                      "  for r in select table_schema, table_name, column_name from information_schema.columns\n"
+                      "           where table_schema = 'public' and is_identity = 'YES' loop\n"
+                      "    execute format('select setval(pg_get_serial_sequence(%L, %L), greatest(coalesce((select max(%I) from %I.%I), 0), 1))',\n"
+                      "      r.table_schema || '.' || r.table_name, r.column_name, r.column_name, r.table_schema, r.table_name);\n"
+                      "  end loop;\n"
+                      "end $$;\n")
+          print(len(x['migrations']), 'миграций,', len(x['data_sql']), 'символов данных')
+          PY
+          md5sum server/db/*.sql
+      - name: commit
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add server/db/001_cloud_schema.sql server/db/002_cloud_data.sql
+          git commit -q -m "Выгрузка из облачного Supabase (схема и демо-данные)" && git push -q origin HEAD:main || echo "без изменений"
