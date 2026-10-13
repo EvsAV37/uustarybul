@@ -823,7 +823,7 @@ function cabView(){
     var html = cabHead()+''+
       '<button type="button" class="row" id="me" style="gap:14px;text-align:left;width:100%">'+
         '<span class="ava" style="width:64px;height:64px;border-radius:16px;font-size:22px;background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</span>'+
-        '<span class="stack" style="flex:1"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px">Открыть мой профиль</span></span>'+
+        '<span class="stack" style="flex:1"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px">Изменить профиль</span></span>'+
         '<span class="muted">'+svg('M9 6l6 6-6 6',20,2)+'</span></button>';
     if(p.deleted_at){
       html += '<div class="warn"><span style="color:var(--dg);flex:none">'+svg(I.warn,22)+'</span><div>Аккаунт будет удалён '+dmy(new Date(new Date(p.deleted_at).getTime()+7*DAY).toISOString())+'. Профиль уже скрыт. <button type="button" id="undel" class="link" style="color:inherit">Отменить удаление</button></div></div>';
@@ -875,7 +875,7 @@ function cabView(){
     }
     html += settingsBlock(true);
     app.innerHTML = html;
-    document.getElementById('me').onclick = function(){ go({name:'profile', id:p.id, from:'Кабинет', own:true}); };
+    document.getElementById('me').onclick = function(){ go({name:'profEdit', p:p}); };
     var b = document.getElementById('buy'); if(b) b.onclick = function(){ toast('Оплата появится позже.'); };
     var ud = document.getElementById('undel'); if(ud) ud.onclick = function(){ sb.rpc('cancel_account_deletion').then(function(){ toast('Удаление отменено'); cabView(); }); };
     var ar = document.getElementById('allRev'); if(ar) ar.onclick = function(){ v.allRev=true; cabView(); };
@@ -897,11 +897,11 @@ function cabView(){
 function settingsBlock(hasProfile){
   var chev = '<span class="muted">'+svg('M9 6l6 6-6 6',18,2)+'</span>';
   return '<div class="group">'+
-    (hasProfile?'<button type="button" class="opt grow" id="editP" style="padding-right:16px">Изменить профиль'+chev+'</button>':'')+
+    (hasProfile?'<button type="button" class="opt grow" id="viewP" style="padding-right:16px">Как меня видят заказчики'+chev+'</button>':'')+
     '<button type="button" class="opt grow" id="setB" style="padding-right:16px">Настройки'+chev+'</button></div>';
 }
 function bindSettings(p){
-  var e = document.getElementById('editP'); if(e) e.onclick = function(){ go({name:'profEdit', p:p}); };
+  var e = document.getElementById('viewP'); if(e) e.onclick = function(){ go({name:'profile', id:p.id, from:'Кабинет', own:true}); };
   document.getElementById('setB').onclick = function(){ go({name:'settings', from:'Кабинет', tab:'cab'}); };
 }
 
