@@ -11,7 +11,7 @@ function settingsView(){
   app.innerHTML =
     '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
     '<div class="setx">'+
-    titleRow('<h1 class="h1">Настройки</h1>', 'margin:0 0 10px')+
+    titleRow('<h1 class="h1">Настройки</h1>', 'margin-bottom:10px')+
     '<div class="group"><button type="button" class="srow" id="sCity" aria-haspopup="dialog"><span>Город</span><span class="v">'+esc(cityName())+chev+'</span></button></div>'+
 
     '<div class="sec-h" id="thL">Оформление</div>'+

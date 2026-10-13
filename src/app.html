@@ -235,13 +235,18 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .mark .logo{width:52px;height:38px}
 .hrow{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:-12px -20px 0;padding:12px 20px 10px;border-bottom:.5px solid transparent;transition:border-color .2s}
 .hrow.sc{border-bottom-color:var(--ln)}
-#nb{position:fixed;left:0;right:0;top:0;z-index:9;background:var(--bg);padding-top:env(safe-area-inset-top,0px);border-bottom:.5px solid var(--ln);transform:translateY(-100%);opacity:0;transition:transform .2s ease,opacity .2s;pointer-events:none}
-#nb.on{transform:none;opacity:1;pointer-events:auto}
-#nb .in{max-width:480px;margin:0 auto;height:50px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:0 16px}
-#nb .t{font-size:16px;font-weight:600;max-width:56vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center}
-#nb .back{height:44px;max-width:100%;overflow:hidden;white-space:nowrap}
-#nb .mark{justify-self:end;width:46px;height:40px}
-#nb .mark .logo{width:42px;height:31px}
+/* крупный заголовок при прокрутке сжимается в строку, знак стоит на месте */
+.trow.cl{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin-left:-20px;margin-right:-20px;padding:6px 20px;border-bottom:.5px solid transparent}
+.trow.cl.bg{border-bottom-color:var(--ln)}
+.trow.cl h1{flex:1 1 auto;transform-origin:left center;will-change:transform;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow.cl .mark{transform-origin:right center;will-change:transform}
+.trow .cbk{position:absolute;left:6px;top:50%;width:32px;height:44px;margin-top:-22px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none}
+.trow .cbk.on{pointer-events:auto}
+/* верхние строки форм и страницы мастера закреплены */
+.topbar,.prow{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin-left:-20px;margin-right:-20px;padding:0 20px;border-bottom:.5px solid transparent}
+.topbar.bg,.prow.bg{border-bottom-color:var(--ln)}
+.prow.tt .back{font-size:0;gap:0}
+.prow .ptt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:52%;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none}
 /* фото профиля */
 .ava{overflow:hidden}
 .ava img{width:100%;height:100%;object-fit:cover;display:block}
@@ -255,7 +260,6 @@ ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;displa
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="/*LOGO_MARK*/" alt="" width="480" height="352" decoding="sync"><div class="sp-name">Уустары бул</div></div>
-<div id="nb"><div class="in"><span class="l"></span><span class="t"></span><button type="button" class="mark" data-home aria-label="На главную"><span class="logo"></span></button></div></div>
 <main id="app" class="app" aria-live="polite"></main>
 <nav class="tabs" aria-label="Разделы"><div class="in" id="tabs"></div></nav>
 <div id="toast" class="toast" hidden></div>
@@ -328,7 +332,7 @@ function price(s){
   return s.unit && s.unit!=='от' ? p+' '+esc(s.unit) : p;
 }
 function markBtn(){ return '<button type="button" class="mark" data-home aria-label="На главную"><span class="logo"></span></button>'; }
-function titleRow(h1, style){ return '<div class="trow"'+(style?' style="'+style+'"':'')+'>'+h1+markBtn()+'</div>'; }
+function titleRow(h1, style){ return '<div class="trow cl"'+(style?' style="'+style+'"':'')+'>'+h1+markBtn()+'</div>'; }
 /* Фото профиля или инициалы — внутрь .ava */
 function avaFill(name, path){ return path ? '<img src="'+SB_URL+'/storage/v1/object/public/photos/'+esc(path)+'" alt="" loading="lazy">' : esc(initials(name)); }
 function initials(n){ var p=String(n||'').trim().split(/\s+/); return ((p[0]||'')[0]||'')+((p[1]||'')[0]||''); }
@@ -398,25 +402,54 @@ document.addEventListener('click', function(e){
   goHome();
 });
 var safeTop = (function(){ var d=document.createElement('div'); d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden'; document.body.appendChild(d); var h=d.offsetHeight; d.remove(); return h; })();
-var nbKey = '';
-function nbUpdate(){
-  var nb = document.getElementById('nb');
-  var hr = app.querySelector('.hrow'); if(hr) hr.classList.toggle('sc', window.scrollY>4);
-  var h = view.name==='home' ? null : (app.querySelector('h1') || app.querySelector('.topbar'));
-  // крупный заголовок ушёл под строку — или верхняя строка формы целиком уехала
-  var on = !!h && h.getBoundingClientRect().bottom < safeTop + (h.tagName==='H1' ? 52 : 2);
-  if(on){
-    var bk = document.getElementById('bk'), tt = h.tagName==='H1' ? h : h.querySelector('.ttl'), title = tt ? tt.textContent.trim() : '', key = view.name+'|'+title+'|'+(bk?bk.textContent:'');
-    if(key!==nbKey){
-      nbKey = key;
-      nb.querySelector('.t').textContent = title;
-      nb.querySelector('.l').innerHTML = bk ? '<button type="button" class="back">'+bk.innerHTML+'</button>' : '';
-      var b = nb.querySelector('.l .back'); if(b) b.onclick = function(){ var x=document.getElementById('bk'); if(x) x.click(); };
+/* Верх экрана при прокрутке:
+   - крупный заголовок (.trow.cl) закреплён и плавно уменьшается, знак на месте;
+     если на экране есть «Назад», в сжатой строке слева появляется стрелка;
+   - строки форм (.topbar), страницы мастера (.prow) и главной (.hrow) закреплены, при прокрутке — фон и линия,
+     у страницы мастера по центру проявляется имя. */
+var hdr = null, hdrTick = false;
+function hdrSetup(){
+  hdr = null;
+  var row = app.querySelector('.trow.cl');
+  if(row){
+    var h = row.querySelector('h1'), m = row.querySelector('.mark');
+    // строка — прямой потомок экрана, иначе «прилипание» ограничено родителем
+    if(row.parentNode !== app && row.parentNode.parentNode === app && !row.closest('.setx')){ var par = row.parentNode; app.insertBefore(row, par); par.style.marginTop = '-16px'; }
+    // длинное название уменьшаем, чтобы влезло в одну строку
+    h.style.fontSize = ''; var fs = 34; while(h.scrollWidth > h.clientWidth + 1 && fs > 22){ fs -= 2; h.style.fontSize = fs+'px'; }
+    if(h.scrollWidth > h.clientWidth + 1 && view.name==='list' && view.cat){
+      var c = S.cats.find(function(x){return x.id===view.cat;});
+      if(c && c.short_name){ h.textContent = c.short_name; fs = 34; h.style.fontSize = ''; while(h.scrollWidth > h.clientWidth + 1 && fs > 22){ fs -= 2; h.style.fontSize = fs+'px'; } }
     }
+    var bk = document.getElementById('bk'), cb = null;
+    if(bk && !row.querySelector('.cbk')){ cb = document.createElement('button'); cb.type='button'; cb.className='cbk'; cb.setAttribute('aria-label','Назад'); cb.innerHTML = svg(I.back,22,2); cb.onclick = function(){ bk.click(); }; row.appendChild(cb); } else cb = row.querySelector('.cbk');
+    hdr = {row:row, h:h, m:m, cb:cb, k: Math.min(1, 18/fs), top0: row.getBoundingClientRect().top + window.scrollY - safeTop};
   }
-  nb.classList.toggle('on', on); nb.setAttribute('aria-hidden', on?'false':'true');
+  hdrUpdate();
 }
-window.addEventListener('scroll', nbUpdate, {passive:true});
+function hdrUpdate(){
+  hdrTick = false;
+  var y = window.scrollY;
+  var hr = app.querySelector('.hrow'); if(hr) hr.classList.toggle('sc', y>4);
+  var tb = app.querySelector('.topbar'); if(tb) tb.classList.toggle('bg', y>4);
+  var pr = app.querySelector('.prow');
+  if(pr){
+    var h1 = app.querySelector('h1'), t = pr.querySelector('.ptt');
+    pr.classList.toggle('bg', y>4);
+    if(h1 && t){ if(!t.textContent) t.textContent = h1.textContent; var b = h1.getBoundingClientRect().bottom - pr.getBoundingClientRect().bottom; var o = Math.min(1, Math.max(0, -b/20)); t.style.opacity = o; pr.classList.toggle('tt', o>0.05); }
+  }
+  if(!hdr || !hdr.row.isConnected) return;
+  var p = Math.min(1, Math.max(0, (y - hdr.top0)/90));
+  var sh = hdr.cb ? 32*p : 0;
+  hdr.h.style.transform = 'translateX('+sh+'px) scale('+(1-(1-hdr.k)*p)+')';
+  hdr.m.style.transform = 'scale('+(1-0.2*p)+')';
+  if(hdr.cb){ var o = Math.min(1, Math.max(0, (p-0.7)/0.3)); hdr.cb.style.opacity = o; hdr.cb.classList.toggle('on', o>0.5); }
+  hdr.row.classList.toggle('bg', p>=1);
+}
+window.addEventListener('scroll', function(){ if(!hdrTick){ hdrTick = true; requestAnimationFrame(hdrUpdate); } }, {passive:true});
+window.addEventListener('resize', function(){ if(hdr) hdrSetup(); });
+// экран дорисовался позже (кабинет, страница мастера) — настроить верх заново
+new MutationObserver(function(){ clearTimeout(hdrSetup.t); hdrSetup.t = setTimeout(hdrSetup, 0); }).observe(app, {childList:true});
 /* Фото профиля текущего мастера — для вкладки «Кабинет» */
 function loadMe(){
   if(!isRegistered()){ if(S.myAva){ S.myAva=null; tabs(); } return; }
@@ -474,7 +507,7 @@ function loadCity(){
 
 /* ---------- экраны ---------- */
 function render(){
-  tabs(); nbKey=''; document.getElementById('nb').classList.remove('on'); setTimeout(nbUpdate, 0);
+  tabs(); setTimeout(hdrSetup, 0);
   if(view.name==='home') return homeView();
   if(view.name==='list') return listView();
   if(view.name==='profile') return profileView();
@@ -602,7 +635,7 @@ function profileView(){
     var since = withUs(p.created_at);
 
     app.innerHTML =
-    '<div class="between" style="margin-bottom:-10px"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
+    '<div class="between prow" style="margin-bottom:-10px"><span class="ptt"></span><button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
       '<div class="row" style="gap:2px"><button type="button" class="circle" id="shareBtn" aria-label="Скопировать ссылку" style="background:none">'+svg(I.share,22)+'</button>'+markBtn()+'</div></div>'+
     '<div class="row" style="gap:16px;align-items:flex-start">'+
       '<div class="ava big" style="background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</div>'+
