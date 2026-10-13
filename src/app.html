@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="sp">
 <head>
 <meta charset="utf-8">
+<style>html.sp,html.sp body{background:#1A1B1F}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#1A1B1F">
 <title>Уустары бул</title>
 <meta name="description" content="Местные мастера вашего города: сантехники, электрики, сварщики, репетиторы и другие.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -14,17 +15,16 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Уустары бул">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1320x2868.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1290x2796.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1206x2622.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1179x2556.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1284x2778.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1170x2532.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1242x2688.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1125x2436.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-828x1792.jpg">
-<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-750x1334.jpg">
-<link rel="preload" as="image" href="icons/logo-mark.webp">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1320x2868.png">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1290x2796.png">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1206x2622.png">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1179x2556.png">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1284x2778.png">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1170x2532.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1242x2688.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1125x2436.png">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-828x1792.png">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-750x1334.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -205,14 +205,14 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px;display:flex;align-items:center;gap:12px}
 .logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
 /* заставка при запуске (совпадает с картинкой запуска iPhone) */
-#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;transition:opacity .35s ease}
-/* знак стоит точно как на картинке запуска iPhone: ширина 42%, центр на 47% высоты ВСЕГО экрана.
-   В установленном приложении страница начинается под полоской часов (--sp-off), поэтому поднимаем знак на эту величину — иначе при смене двоится */
-#splash img{position:absolute;left:50%;top:calc(47% - var(--sp-off,0px) * .53);width:min(42vw,240px);height:auto;transform:translate(-50%,-50%)}
-#splash .sp-name{position:absolute;left:0;right:0;top:calc(47% - var(--sp-off,0px) * .53 + min(15.4vw,88px) + 18px);text-align:center;color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .5s .15s ease-out both}
+#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .35s ease}
+/* картинка запуска iPhone — ровный фон без знака (иначе при передаче странице мерцает); знак проявляется уже здесь */
+#splash img{width:min(42vw,240px);height:auto;animation:spIn .4s .05s ease-out both}
+#splash .sp-name{color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .45s .25s ease-out both}
 #splash.out{opacity:0;pointer-events:none}
-@keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){#splash .sp-name{animation:none}}
+@keyframes spIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@keyframes spUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash img,#splash .sp-name{animation:none}}
 .lg-h{margin:0;font-size:26px;font-weight:700}
 .lg-p{margin:-8px 0 6px;font-size:15px;line-height:1.45;color:var(--mu)}
 .lg-small{margin:0;font-size:12px;line-height:1.45;color:var(--mu);text-align:center}
@@ -229,8 +229,7 @@ ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;displa
 </style>
 </head>
 <body>
-<div id="splash" aria-hidden="true"><img src="icons/logo-mark.webp" alt="" width="480" height="352"><div class="sp-name">Уустары бул</div></div>
-<script>(function(){var o=0;try{if((navigator.standalone||matchMedia("(display-mode: standalone)").matches)&&screen.height>innerHeight&&screen.height-innerHeight<120)o=screen.height-innerHeight}catch(e){}document.getElementById("splash").style.setProperty("--sp-off",o+"px")})()</script>
+<div id="splash" aria-hidden="true"><img src="/*LOGO_MARK*/" alt="" width="480" height="352" decoding="sync"><div class="sp-name">Уустары бул</div></div>
 <main id="app" class="app" aria-live="polite"></main>
 <nav class="tabs" aria-label="Разделы"><div class="in" id="tabs"></div></nav>
 <div id="toast" class="toast" hidden></div>
@@ -753,14 +752,14 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
-// Заставка: не меньше 0,9 с от открытия (чтобы не мигала), не больше 3 с
+// Заставка: не меньше 1,2 с от открытия (знак и название успевают проявиться), не больше 3 с
 var splashEl = document.getElementById('splash');
 if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A1B1F');
 function hideSplash(){
   if(!splashEl) return;
   var el = splashEl; splashEl = null;
-  var wait = Math.max(0, 900 - (window.performance ? performance.now() : 0));
-  setTimeout(function(){ applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 400); }, wait);
+  var wait = Math.max(0, 1200 - (window.performance ? performance.now() : 0));
+  setTimeout(function(){ document.documentElement.classList.remove('sp'); applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 400); }, wait);
 }
 setTimeout(hideSplash, 3000);
 (function(){

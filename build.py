@@ -16,6 +16,9 @@ lib = open(lib_path, encoding='utf8').read()
 old = 'if(!e)throw new Error("Automatic publicPath is not supported in this browser");'
 assert old in lib, 'другая версия supabase-js — проверь патч'
 lib = lib.replace(old, 'if(!e)e="https://localhost/";').replace('</script', '<\\/script')
+import base64
+logo = 'data:image/webp;base64,' + base64.b64encode(open(os.path.join(ROOT, 'icons', 'logo-mark.webp'), 'rb').read()).decode()
+src = src.replace('/*LOGO_MARK*/', logo)  # знак заставки встроен в страницу — готов к первому кадру
 open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf8').write(src.replace('/*SUPABASE_UMD*/', lib))
 print('index.html собран')
 
