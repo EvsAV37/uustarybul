@@ -9,9 +9,9 @@ function settingsView(){
   var reg = isRegistered(), guest = isGuest();
   var chev = svg('M9 6l6 6-6 6',18,2);
   app.innerHTML =
-    '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
+    topRow(backBtn(v.from||'Назад'))+
     '<div class="setx">'+
-    titleRow('<h1 class="h1">Настройки</h1>', 'margin-bottom:10px')+
+    '<h1 class="h1" style="margin:0 0 10px">Настройки</h1>'+
     '<div class="group"><button type="button" class="srow" id="sCity" aria-haspopup="dialog"><span>Город</span><span class="v">'+esc(cityName())+chev+'</span></button></div>'+
 
     '<div class="sec-h" id="thL">Оформление</div>'+

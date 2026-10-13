@@ -231,22 +231,16 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 /* знак «УБ» — на главную; закреплённая строка главной; тонкая строка при прокрутке */
 .trow{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .trow>h1{min-width:0}
+.hrow .back{margin-left:-4px}
 .mark{flex:none;display:flex;align-items:center;justify-content:center;width:56px;height:44px;margin-right:-4px}
 .mark .logo{width:52px;height:38px}
 .hrow{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:-12px -20px 0;padding:12px 20px 10px;border-bottom:.5px solid transparent;transition:border-color .2s}
 .hrow.sc{border-bottom-color:var(--ln)}
-/* крупный заголовок при прокрутке сжимается в строку, знак стоит на месте */
-.trow.cl{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin-left:-20px;margin-right:-20px;padding:6px 20px;border-bottom:.5px solid transparent}
-.trow.cl.bg{border-bottom-color:var(--ln)}
-.trow.cl h1{flex:1 1 auto;transform-origin:left center;will-change:transform;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.trow.cl .mark{transform-origin:right center;will-change:transform}
-.trow .cbk{position:absolute;left:6px;top:50%;width:32px;height:44px;margin-top:-22px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none}
-.trow .cbk.on{pointer-events:auto}
 /* верхние строки форм и страницы мастера закреплены */
 .topbar,.prow{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin-left:-20px;margin-right:-20px;padding:0 20px;border-bottom:.5px solid transparent}
 .topbar.bg,.prow.bg{border-bottom-color:var(--ln)}
 .prow.tt .back{font-size:0;gap:0}
-.prow .ptt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:52%;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none}
+.prow .ptt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:52%;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none;transition:opacity .15s}
 /* фото профиля */
 .ava{overflow:hidden}
 .ava img{width:100%;height:100%;object-fit:cover;display:block}
@@ -332,7 +326,9 @@ function price(s){
   return s.unit && s.unit!=='от' ? p+' '+esc(s.unit) : p;
 }
 function markBtn(){ return '<button type="button" class="mark" data-home aria-label="На главную"><span class="logo"></span></button>'; }
-function titleRow(h1, style){ return '<div class="trow cl"'+(style?' style="'+style+'"':'')+'>'+h1+markBtn()+'</div>'; }
+/* Закреплённая верхняя строка, как на главной: слева «Назад» (если есть), справа знак */
+function topRow(left){ return '<div class="between hrow">'+(left||'<span></span>')+markBtn()+'</div>'; }
+function backBtn(label){ return '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(label||'Назад')+'</button>'; }
 /* Фото профиля или инициалы — внутрь .ava */
 function avaFill(name, path){ return path ? '<img src="'+SB_URL+'/storage/v1/object/public/photos/'+esc(path)+'" alt="" loading="lazy">' : esc(initials(name)); }
 function initials(n){ var p=String(n||'').trim().split(/\s+/); return ((p[0]||'')[0]||'')+((p[1]||'')[0]||''); }
@@ -402,31 +398,10 @@ document.addEventListener('click', function(e){
   goHome();
 });
 var safeTop = (function(){ var d=document.createElement('div'); d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden'; document.body.appendChild(d); var h=d.offsetHeight; d.remove(); return h; })();
-/* Верх экрана при прокрутке:
-   - крупный заголовок (.trow.cl) закреплён и плавно уменьшается, знак на месте;
-     если на экране есть «Назад», в сжатой строке слева появляется стрелка;
-   - строки форм (.topbar), страницы мастера (.prow) и главной (.hrow) закреплены, при прокрутке — фон и линия,
-     у страницы мастера по центру проявляется имя. */
-var hdr = null, hdrTick = false;
-function hdrSetup(){
-  hdr = null;
-  var row = app.querySelector('.trow.cl');
-  if(row){
-    var h = row.querySelector('h1'), m = row.querySelector('.mark');
-    // строка — прямой потомок экрана, иначе «прилипание» ограничено родителем
-    if(row.parentNode !== app && row.parentNode.parentNode === app && !row.closest('.setx')){ var par = row.parentNode; app.insertBefore(row, par); par.style.marginTop = '-16px'; }
-    // длинное название уменьшаем, чтобы влезло в одну строку
-    h.style.fontSize = ''; var fs = 34; while(h.scrollWidth > h.clientWidth + 1 && fs > 22){ fs -= 2; h.style.fontSize = fs+'px'; }
-    if(h.scrollWidth > h.clientWidth + 1 && view.name==='list' && view.cat){
-      var c = S.cats.find(function(x){return x.id===view.cat;});
-      if(c && c.short_name){ h.textContent = c.short_name; fs = 34; h.style.fontSize = ''; while(h.scrollWidth > h.clientWidth + 1 && fs > 22){ fs -= 2; h.style.fontSize = fs+'px'; } }
-    }
-    var bk = document.getElementById('bk'), cb = null;
-    if(bk && !row.querySelector('.cbk')){ cb = document.createElement('button'); cb.type='button'; cb.className='cbk'; cb.setAttribute('aria-label','Назад'); cb.innerHTML = svg(I.back,22,2); cb.onclick = function(){ bk.click(); }; row.appendChild(cb); } else cb = row.querySelector('.cbk');
-    hdr = {row:row, h:h, m:m, cb:cb, k: Math.min(1, 18/fs), top0: row.getBoundingClientRect().top + window.scrollY - safeTop};
-  }
-  hdrUpdate();
-}
+/* Верх экрана: закреплённые строки (.hrow — главная и экраны с крупным заголовком, .topbar — формы,
+   .prow — страница мастера). При прокрутке у строки появляются фон и линия; на странице мастера
+   по центру проявляется имя, «Назад» сокращается до стрелки. Само движение — средствами браузера. */
+var hdrTick = false;
 function hdrUpdate(){
   hdrTick = false;
   var y = window.scrollY;
@@ -436,20 +411,10 @@ function hdrUpdate(){
   if(pr){
     var h1 = app.querySelector('h1'), t = pr.querySelector('.ptt');
     pr.classList.toggle('bg', y>4);
-    if(h1 && t){ if(!t.textContent) t.textContent = h1.textContent; var b = h1.getBoundingClientRect().bottom - pr.getBoundingClientRect().bottom; var o = Math.min(1, Math.max(0, -b/20)); t.style.opacity = o; pr.classList.toggle('tt', o>0.05); }
+    if(h1 && t){ if(!t.textContent) t.textContent = h1.textContent; var b = h1.getBoundingClientRect().bottom - pr.getBoundingClientRect().bottom; var o = b < 0 ? 1 : 0; t.style.opacity = o; pr.classList.toggle('tt', o>0); }
   }
-  if(!hdr || !hdr.row.isConnected) return;
-  var p = Math.min(1, Math.max(0, (y - hdr.top0)/90));
-  var sh = hdr.cb ? 32*p : 0;
-  hdr.h.style.transform = 'translateX('+sh+'px) scale('+(1-(1-hdr.k)*p)+')';
-  hdr.m.style.transform = 'scale('+(1-0.2*p)+')';
-  if(hdr.cb){ var o = Math.min(1, Math.max(0, (p-0.7)/0.3)); hdr.cb.style.opacity = o; hdr.cb.classList.toggle('on', o>0.5); }
-  hdr.row.classList.toggle('bg', p>=1);
 }
 window.addEventListener('scroll', function(){ if(!hdrTick){ hdrTick = true; requestAnimationFrame(hdrUpdate); } }, {passive:true});
-window.addEventListener('resize', function(){ if(hdr) hdrSetup(); });
-// экран дорисовался позже (кабинет, страница мастера) — настроить верх заново
-new MutationObserver(function(){ clearTimeout(hdrSetup.t); hdrSetup.t = setTimeout(hdrSetup, 0); }).observe(app, {childList:true});
 /* Фото профиля текущего мастера — для вкладки «Кабинет» */
 function loadMe(){
   if(!isRegistered()){ if(S.myAva){ S.myAva=null; tabs(); } return; }
@@ -507,7 +472,7 @@ function loadCity(){
 
 /* ---------- экраны ---------- */
 function render(){
-  tabs(); setTimeout(hdrSetup, 0);
+  tabs(); setTimeout(hdrUpdate, 0);
   if(view.name==='home') return homeView();
   if(view.name==='list') return listView();
   if(view.name==='profile') return profileView();
@@ -572,8 +537,8 @@ function openSearch(q){ sb.rpc('log_search',{p_city:S.city, p_query:q}); go({nam
 function listView(){
   var v = view; v.sort = v.sort || 'default'; v.filter = v.filter || 'all';
   app.innerHTML =
-  (S.stack.length ? '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Назад</button>' : '')+
-  '<div>'+titleRow('<h1 class="h1">'+esc(v.title)+'</h1>')+'<div class="between" style="margin-top:6px;align-items:baseline"><span class="muted" id="cnt" style="font-size:15px">&nbsp;</span>'+
+  topRow(S.stack.length ? backBtn('Назад') : '')+
+  '<div><h1 class="h1">'+esc(v.title)+'</h1><div class="between" style="margin-top:6px;align-items:baseline"><span class="muted" id="cnt" style="font-size:15px">&nbsp;</span>'+
     '<button type="button" id="sortB" style="font-size:14px;font-weight:500;color:var(--mu);flex:none" aria-label="Порядок: '+(v.sort==='rating'?'по рейтингу':'как обычно')+'">'+(v.sort==='rating'?'По рейтингу':'Как обычно')+' '+svg('M7 10l5-5 5 5M7 14l5 5 5-5',14,2)+'</button></div></div>'+
   '<form id="rf" role="search"><label class="search">'+svg(I.search,20)+'<input id="rq" type="search" enterkeyhint="search" autocomplete="off" aria-label="Уточнить поиск" placeholder="'+esc(v.cat?listHint(v.cat):'Что нужно сделать?')+'" value="'+esc(v.cat?v.refine||'':v.query)+'"></label></form>'+
   '<div class="chips scroll" role="group" aria-label="Фильтр">'+[['all','Все'],['reviews','С отзывами'],['photos','С фото работ'],['new','Новые']].map(function(f){
@@ -636,7 +601,7 @@ function profileView(){
 
     app.innerHTML =
     '<div class="between prow" style="margin-bottom:-10px"><span class="ptt"></span><button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
-      '<div class="row" style="gap:2px"><button type="button" class="circle" id="shareBtn" aria-label="Скопировать ссылку" style="background:none">'+svg(I.share,22)+'</button>'+markBtn()+'</div></div>'+
+      '<div class="row" style="gap:2px"><button type="button" class="circle" id="shareBtn" aria-label="Поделиться" style="background:none">'+svg(I.share,22)+'</button>'+markBtn()+'</div></div>'+
     '<div class="row" style="gap:16px;align-items:flex-start">'+
       '<div class="ava big" style="background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</div>'+
       '<div style="flex:1;min-width:0"><h1 style="margin:0;font-size:23px;line-height:1.15;font-weight:700">'+esc(p.display_name)+'</h1>'+
@@ -691,16 +656,13 @@ function profileView(){
       if(!isRegistered()) return needRegistration('Жаловаться могут только зарегистрированные пользователи. Так жалобы нельзя накрутить.', function(){ complaintSheet(p); });
       complaintSheet(p);
     };
-    document.getElementById('shareBtn').onclick = function(){
-      var t = p.display_name+' — '+sphereNames(spheres.map(function(s){return s.title;}))+'. Уустары бул';
-      if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){toast('Скопировано');},function(){toast(t);}); else toast(t);
-    };
+    document.getElementById('shareBtn').onclick = function(){ shareMaster(p, spheres); };
     var ar = document.getElementById('allRev'); if(ar) ar.onclick = function(){ v.allRev=true; profileView(); };
   });
 }
 
 function favView(){
-  app.innerHTML = titleRow('<h1 class="h1">Избранное</h1>')+
+  app.innerHTML = topRow()+'<h1 class="h1">Избранное</h1>'+
     (isRegistered() ? '<div class="list" id="favList"><div class="empty">Загружаем…</div></div>'
      : '<div class="empty">Сохраняйте мастеров, чтобы быстро найти их снова.<br>Избранное доступно после входа по номеру телефона.</div><button type="button" class="btn pr" id="loginBtn">Войти по номеру</button>');
   var lb = document.getElementById('loginBtn'); if(lb) lb.onclick = function(){ loginSheet(); };
@@ -739,7 +701,7 @@ function dbMsg(e){
   if(e && e.code==='23505') return null;
   return errText(e);
 }
-function cabHead(){ return titleRow('<h1 class="h1">Кабинет</h1>', 'margin-top:28px'); }
+function cabHead(){ return topRow()+'<h1 class="h1">Кабинет</h1>'; }
 function catById(id){ return S.cats.find(function(c){return c.id===id;}) || {name:'',slug:''}; }
 /* Выбор сферы деятельности: профессии по группам */
 function catSelect(sel){
@@ -1433,6 +1395,39 @@ function citySheet(){
     S.city=Number(b.getAttribute('data-city')); store('ub_city', String(S.city)); closeSheet(); render(); loadCity();
   }; }); });
 }
+/* ---------- поделиться мастером ---------- */
+function masterLink(id){ return location.origin + location.pathname + '?m=' + id; }
+function shareMaster(p, spheres){
+  var url = masterLink(p.id);
+  var c = S.cities.find(function(x){return x.id===p.city_id;});
+  var text = p.display_name+' — '+sphereNames(spheres.map(function(s){return s.title;}))+(c?' · '+c.name:'')+'. Уустары бул';
+  if(navigator.share){
+    navigator.share({title: p.display_name, text: text, url: url}).catch(function(e){ if(e && e.name!=='AbortError') shareSheet(text, url); });
+    return;
+  }
+  shareSheet(text, url);
+}
+/* Своё окно — там, где браузер не умеет системное (компьютер, старые телефоны) */
+function shareSheet(text, url){
+  var t = encodeURIComponent(text), u = encodeURIComponent(url), tu = encodeURIComponent(text+' '+url);
+  var opts = [
+    ['ВКонтакте', 'https://vk.com/share.php?url='+u+'&title='+t],
+    ['Одноклассники', 'https://connect.ok.ru/offer?url='+u+'&title='+t],
+    ['Telegram', 'https://t.me/share/url?url='+u+'&text='+t],
+    ['WhatsApp', 'https://wa.me/?text='+tu],
+    ['СМС', 'sms:?&body='+tu]
+  ];
+  openSheet('<h2>Поделиться</h2>'+
+    opts.map(function(o){ return '<a class="opt" target="_blank" rel="noopener" href="'+esc(o[1])+'"><span>'+o[0]+'</span>'+svg('M9 6l6 6-6 6',18,2)+'</a>'; }).join('')+
+    '<button type="button" class="opt" id="shCopy"><span>Скопировать ссылку</span>'+svg(I.copy,20)+'</button>',
+  function(el){
+    el.querySelectorAll('a.opt').forEach(function(a){ a.addEventListener('click', function(){ setTimeout(closeSheet, 300); }); });
+    el.querySelector('#shCopy').onclick = function(){
+      var done = function(){ closeSheet(); toast('Ссылка скопирована'); };
+      if(navigator.clipboard) navigator.clipboard.writeText(url).then(done, function(){ closeSheet(); toast(url); }); else { closeSheet(); toast(url); }
+    };
+  });
+}
 /* ---------- приложение на экране (PWA) ---------- */
 var installEvt = null;
 function isStandalone(){ return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
@@ -1491,9 +1486,9 @@ function settingsView(){
   var reg = isRegistered(), guest = isGuest();
   var chev = svg('M9 6l6 6-6 6',18,2);
   app.innerHTML =
-    '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(v.from||'Назад')+'</button>'+
+    topRow(backBtn(v.from||'Назад'))+
     '<div class="setx">'+
-    titleRow('<h1 class="h1">Настройки</h1>', 'margin-bottom:10px')+
+    '<h1 class="h1" style="margin:0 0 10px">Настройки</h1>'+
     '<div class="group"><button type="button" class="srow" id="sCity" aria-haspopup="dialog"><span>Город</span><span class="v">'+esc(cityName())+chev+'</span></button></div>'+
 
     '<div class="sec-h" id="thL">Оформление</div>'+
@@ -1875,7 +1870,9 @@ function hideSplash(){
 setTimeout(hideSplash, 3000);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
+  var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
   if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
+  else if(mm){ view = {name:'profile', id:mm[1].toLowerCase(), from:'Главная'}; S.stack = [{name:'home'}]; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
 })();
 if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function(e){
   if(e.data && e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
