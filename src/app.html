@@ -231,7 +231,11 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 /* знак «УБ» — на главную; закреплённая строка главной; тонкая строка при прокрутке */
 .trow{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .trow>h1{min-width:0}
-.hrow .back{margin-left:-4px}
+.hrow .rt{display:flex;align-items:center;gap:2px;min-width:0;flex:1 1 auto}
+.hrow .rt h1{margin:0;font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hrow .rt h1.sm{font-size:24px}
+.hrow .rt h1.xs{font-size:21px}
+.hrow .rbk{flex:none;width:32px;height:44px;margin-left:-8px;display:flex;align-items:center;justify-content:center}
 .mark{flex:none;display:flex;align-items:center;justify-content:center;width:56px;height:44px;margin-right:-4px}
 .mark .logo{width:52px;height:38px}
 .hrow{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:-12px -20px 0;padding:12px 20px 10px;border-bottom:.5px solid transparent;transition:border-color .2s}
@@ -327,8 +331,10 @@ function price(s){
 }
 function markBtn(){ return '<button type="button" class="mark" data-home aria-label="На главную"><span class="logo"></span></button>'; }
 /* Закреплённая верхняя строка, как на главной: слева «Назад» (если есть), справа знак */
-function topRow(left){ return '<div class="between hrow">'+(left||'<span></span>')+markBtn()+'</div>'; }
-function backBtn(label){ return '<button type="button" class="back" id="bk">'+svg(I.back,22,2)+esc(label||'Назад')+'</button>'; }
+function topRow(title, back){
+  return '<div class="between hrow"><div class="rt">'+(back ? '<button type="button" class="rbk" id="bk" aria-label="Назад">'+svg(I.back,26,2.2)+'</button>' : '')+
+    '<h1'+(String(title).length>19?' class="xs"':String(title).length>13?' class="sm"':'')+'>'+esc(title)+'</h1></div>'+markBtn()+'</div>';
+}
 /* Фото профиля или инициалы — внутрь .ava */
 function avaFill(name, path){ return path ? '<img src="'+SB_URL+'/storage/v1/object/public/photos/'+esc(path)+'" alt="" loading="lazy">' : esc(initials(name)); }
 function initials(n){ var p=String(n||'').trim().split(/\s+/); return ((p[0]||'')[0]||'')+((p[1]||'')[0]||''); }
@@ -531,14 +537,18 @@ function homeView(){
     go({name:'list', cat:c.id, title:c.name_plural||c.name, query:''});
   }; });
 }
+function listTitle(v){
+  if(v.cat){ var c = S.cats.find(function(x){return x.id===v.cat;}); if(c && c.short_name && String(v.title).length>24) return c.short_name; }
+  return v.title;
+}
 function listHint(id){ var c = S.cats.find(function(x){return x.id===id;}); return c&&c.hint_query ? 'Например, '+c.hint_query : 'Уточнить: что нужно сделать?'; }
 function openSearch(q){ sb.rpc('log_search',{p_city:S.city, p_query:q}); go({name:'list', query:q, title:'«'+q+'»'}); }
 
 function listView(){
   var v = view; v.sort = v.sort || 'default'; v.filter = v.filter || 'all';
   app.innerHTML =
-  topRow(S.stack.length ? backBtn('Назад') : '')+
-  '<div><h1 class="h1">'+esc(v.title)+'</h1><div class="between" style="margin-top:6px;align-items:baseline"><span class="muted" id="cnt" style="font-size:15px">&nbsp;</span>'+
+  topRow(listTitle(v), S.stack.length)+
+  '<div><div class="between" style="margin-top:-14px;align-items:baseline"><span class="muted" id="cnt" style="font-size:15px">&nbsp;</span>'+
     '<button type="button" id="sortB" style="font-size:14px;font-weight:500;color:var(--mu);flex:none" aria-label="Порядок: '+(v.sort==='rating'?'по рейтингу':'как обычно')+'">'+(v.sort==='rating'?'По рейтингу':'Как обычно')+' '+svg('M7 10l5-5 5 5M7 14l5 5 5-5',14,2)+'</button></div></div>'+
   '<form id="rf" role="search"><label class="search">'+svg(I.search,20)+'<input id="rq" type="search" enterkeyhint="search" autocomplete="off" aria-label="Уточнить поиск" placeholder="'+esc(v.cat?listHint(v.cat):'Что нужно сделать?')+'" value="'+esc(v.cat?v.refine||'':v.query)+'"></label></form>'+
   '<div class="chips scroll" role="group" aria-label="Фильтр">'+[['all','Все'],['reviews','С отзывами'],['photos','С фото работ'],['new','Новые']].map(function(f){
@@ -662,7 +672,7 @@ function profileView(){
 }
 
 function favView(){
-  app.innerHTML = topRow()+'<h1 class="h1">Избранное</h1>'+
+  app.innerHTML = topRow('Избранное')+
     (isRegistered() ? '<div class="list" id="favList"><div class="empty">Загружаем…</div></div>'
      : '<div class="empty">Сохраняйте мастеров, чтобы быстро найти их снова.<br>Избранное доступно после входа по номеру телефона.</div><button type="button" class="btn pr" id="loginBtn">Войти по номеру</button>');
   var lb = document.getElementById('loginBtn'); if(lb) lb.onclick = function(){ loginSheet(); };

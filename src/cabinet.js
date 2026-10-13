@@ -22,7 +22,7 @@ function dbMsg(e){
   if(e && e.code==='23505') return null;
   return errText(e);
 }
-function cabHead(){ return topRow()+'<h1 class="h1">Кабинет</h1>'; }
+function cabHead(){ return topRow('Кабинет'); }
 function catById(id){ return S.cats.find(function(c){return c.id===id;}) || {name:'',slug:''}; }
 /* Выбор сферы деятельности: профессии по группам */
 function catSelect(sel){
