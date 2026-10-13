@@ -3,8 +3,8 @@
    Значки и шрифты: из кеша, в фоне обновляются.
    Запросы к Supabase не трогаем — данные всегда свежие.
    Push: показывает уведомление, по нажатию открывает кабинет. */
-var VERSION = 'ub-v2';
-var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png'];
+var VERSION = 'ub-v3';
+var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp'];
 
 var OFFLINE_HTML = '<!doctype html><html lang="ru"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Уустары бул</title>' +

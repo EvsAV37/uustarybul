@@ -14,6 +14,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Уустары бул">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1320x2868.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1290x2796.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1206x2622.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1179x2556.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1284x2778.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1170x2532.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1242x2688.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash/launch-1125x2436.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-828x1792.jpg">
+<link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="icons/splash/launch-750x1334.jpg">
+<link rel="preload" as="image" href="icons/logo-mark.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -191,7 +202,16 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .scr-top .side{display:flex}
 .scr-top .side:last-child{justify-content:flex-end}
 .scr-body{display:flex;flex-direction:column;flex:1;gap:16px;margin-top:16px}
-.brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px}
+.brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px;display:flex;align-items:center;gap:12px}
+.logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
+/* заставка при запуске (совпадает с картинкой запуска iPhone) */
+#splash{position:fixed;inset:0;z-index:100;background:#0A1A2E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .35s ease}
+#splash img{width:42vw;max-width:240px;height:auto;animation:spIn .6s cubic-bezier(.2,.8,.2,1) both}
+#splash .sp-name{color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;height:32px;line-height:32px;animation:spUp .5s .3s ease-out both}
+#splash.out{opacity:0;pointer-events:none}
+@keyframes spIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+@keyframes spUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash img,#splash .sp-name{animation:none}}
 .lg-h{margin:0;font-size:26px;font-weight:700}
 .lg-p{margin:-8px 0 6px;font-size:15px;line-height:1.45;color:var(--mu)}
 .lg-small{margin:0;font-size:12px;line-height:1.45;color:var(--mu);text-align:center}
@@ -208,6 +228,7 @@ ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;displa
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true"><img src="icons/logo-mark.webp" alt="" width="480" height="352"><div class="sp-name">Уустары бул</div></div>
 <main id="app" class="app" aria-live="polite"></main>
 <nav class="tabs" aria-label="Разделы"><div class="in" id="tabs"></div></nav>
 <div id="toast" class="toast" hidden></div>
@@ -1468,7 +1489,7 @@ function loginSheet(after){
   var X = '<button type="button" class="circle" data-close aria-label="Закрыть">'+svg('M18 6L6 18M6 6l12 12',18,2)+'</button>';
   function shell(backLabel, inner){
     return '<div class="scr-top">'+(backLabel?'<button type="button" class="back" id="lgBack">'+svg(I.back,22,2)+esc(backLabel)+'</button>':'<span></span>')+X+'</div>'+
-      '<div class="brand">Уустары бул</div>'+inner;
+      '<div class="brand"><span class="logo" aria-hidden="true"></span>Уустары бул</div>'+inner;
   }
   function stepPhone(){
     clearT();
@@ -1611,6 +1632,16 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
+// Заставка: не меньше 0,9 с от открытия (чтобы не мигала), не больше 3 с
+var splashEl = document.getElementById('splash');
+if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0A1A2E');
+function hideSplash(){
+  if(!splashEl) return;
+  var el = splashEl; splashEl = null;
+  var wait = Math.max(0, 900 - (window.performance ? performance.now() : 0));
+  setTimeout(function(){ applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 400); }, wait);
+}
+setTimeout(hideSplash, 3000);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
   if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
@@ -1619,7 +1650,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('messa
   if(e.data && e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
 });
 render();
-loadBase().then(render).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; });
+loadBase().then(render).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; }).then(hideSplash);
 })();
 </script>
 </body>

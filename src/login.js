@@ -40,7 +40,7 @@ function loginSheet(after){
   var X = '<button type="button" class="circle" data-close aria-label="Закрыть">'+svg('M18 6L6 18M6 6l12 12',18,2)+'</button>';
   function shell(backLabel, inner){
     return '<div class="scr-top">'+(backLabel?'<button type="button" class="back" id="lgBack">'+svg(I.back,22,2)+esc(backLabel)+'</button>':'<span></span>')+X+'</div>'+
-      '<div class="brand">Уустары бул</div>'+inner;
+      '<div class="brand"><span class="logo" aria-hidden="true"></span>Уустары бул</div>'+inner;
   }
   function stepPhone(){
     clearT();
