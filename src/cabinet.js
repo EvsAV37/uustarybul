@@ -15,12 +15,14 @@ function dbMsg(e){
     review_own_profile:'Нельзя оставить отзыв самому себе.',
     complaint_own_profile:'Нельзя пожаловаться на себя.',
     sphere_blocked:'Это направление скрыто после жалоб, опубликовать его нельзя.',
-    registration_required:'Нужен вход по номеру телефона.'
+    registration_required:'Нужен вход по номеру телефона.',
+    avatar_path_invalid:'Не получилось сохранить фото. Попробуйте ещё раз.'
   };
   for(var k in map) if(m.indexOf(k)>=0) return map[k];
   if(e && e.code==='23505') return null;
   return errText(e);
 }
+function cabHead(){ return titleRow('<h1 class="h1">Кабинет</h1>', 'margin-top:28px'); }
 function catById(id){ return S.cats.find(function(c){return c.id===id;}) || {name:'',slug:''}; }
 /* Выбор сферы деятельности: профессии по группам */
 function catSelect(sel){
@@ -88,7 +90,7 @@ function sphereState(s, pro){
 function cabView(){
   var v = view;
   if(!isRegistered()){
-    app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1>'+
+    app.innerHTML = cabHead()+''+
       '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Станьте мастером на Уустары бул</div>'+
       '<div class="muted" style="font-size:15px;line-height:1.5">Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.</div></div>'+
       '<button type="button" class="btn pr" id="lg">Войти по номеру</button>'+
@@ -97,13 +99,13 @@ function cabView(){
     bindSettings(null);
     return;
   }
-  app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1><div class="skel" style="height:64px"></div><div class="skel" style="height:160px"></div>';
+  app.innerHTML = cabHead()+'<div class="skel" style="height:64px"></div><div class="skel" style="height:160px"></div>';
   loadMine().then(function(m){
     if(view!==v) return;
     v.m = m;
     var p = m.p;
     if(!p){
-      app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1>'+
+      app.innerHTML = cabHead()+''+
         '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Вы вошли как заказчик</div>'+
         '<div class="muted" style="font-size:15px;line-height:1.5">Чтобы предлагать свои услуги, создайте профиль мастера. Это бесплатно, а после первой публикации — 3 месяца Про в подарок.</div></div>'+
         '<button type="button" class="btn pr" id="np">Создать профиль мастера</button>'+settingsBlock(false);
@@ -111,12 +113,13 @@ function cabView(){
       bindSettings(null);
       return;
     }
+    if((p.avatar_path||null)!==(S.myAva||null)){ S.myAva = p.avatar_path||null; tabs(); }
     var pro = p.pro_until && new Date(p.pro_until) > new Date();
     var active = m.spheres.filter(function(s){return s.status==='active';}).length;
     var proDays = pro ? daysLeft(p.pro_until) : 0;
-    var html = '<h1 class="h1" style="margin-top:28px">Кабинет</h1>'+
+    var html = cabHead()+''+
       '<button type="button" class="row" id="me" style="gap:14px;text-align:left;width:100%">'+
-        '<span class="ava" style="width:64px;height:64px;border-radius:16px;font-size:22px;background:'+avColor(p.id)+'">'+esc(initials(p.display_name))+'</span>'+
+        '<span class="ava" style="width:64px;height:64px;border-radius:16px;font-size:22px;background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</span>'+
         '<span class="stack" style="flex:1"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px">Открыть мой профиль</span></span>'+
         '<span class="muted">'+svg('M9 6l6 6-6 6',20,2)+'</span></button>';
     if(p.deleted_at){
@@ -182,7 +185,7 @@ function cabView(){
       replySheet(m.reviews.find(function(r){return r.id===x.getAttribute('data-reply');}));
     }; });
     bindSettings(p);
-  }).catch(function(e){ if(view===v) app.innerHTML = '<h1 class="h1" style="margin-top:28px">Кабинет</h1><div class="empty">'+esc(errText(e))+'</div>'; });
+  }).catch(function(e){ if(view===v) app.innerHTML = cabHead()+'<div class="empty">'+esc(errText(e))+'</div>'; });
 }
 function settingsBlock(hasProfile){
   var chev = '<span class="muted">'+svg('M9 6l6 6-6 6',18,2)+'</span>';
@@ -195,14 +198,86 @@ function bindSettings(p){
   document.getElementById('setB').onclick = function(){ go({name:'settings', from:'Кабинет', tab:'cab'}); };
 }
 
+/* ---------- фото профиля ---------- */
+/* Квадрат по центру снимка, 512 px */
+function squareAva(file){
+  return new Promise(function(res, rej){
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h), out = Math.min(512, side);
+      var c = document.createElement('canvas'); c.width = c.height = out;
+      c.getContext('2d').drawImage(img, (w-side)/2, (h-side)/2, side, side, 0, 0, out, out); URL.revokeObjectURL(url);
+      c.toBlob(function(b){ b ? res(b) : rej(new Error('Не удалось обработать фото')); }, 'image/jpeg', 0.86);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('Не удалось открыть фото. Подойдут JPG и PNG.')); };
+    img.src = url;
+  });
+}
+/* Загрузить новое фото, записать в профиль, удалить прежний файл */
+function saveAvatar(blob, oldPath){
+  var path = uid()+'/avatar-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg';
+  return sb.storage.from('photos').upload(path, blob, {contentType:'image/jpeg'}).then(function(up){
+    if(up.error) throw up.error;
+    return sb.from('profiles').update({avatar_path:path}).eq('id', uid()).then(function(r){
+      if(r.error){ sb.storage.from('photos').remove([path]); throw r.error; }
+      if(oldPath) sb.storage.from('photos').remove([oldPath]);
+      S.myAva = path; tabs();
+      return path;
+    });
+  });
+}
+function avaEditHtml(v, p){
+  var src = v.avaUrl || (p.avatar_path ? photoUrl(p.avatar_path) : null), has = !!src;
+  return '<div class="avedit"><label class="ava big" for="avaF" style="cursor:pointer;background:'+avColor(uid()||'x')+'">'+
+      (has ? '<img src="'+esc(src)+'" alt="Фото профиля">' : esc(initials(p.display_name)||'')+'')+'</label>'+
+    '<div class="stack"><label for="avaF" class="link" id="avaL" style="font-size:16px;font-weight:600;cursor:pointer">'+(v.avaBusy?'Загружаем…':has?'Изменить фото':'Добавить фото')+'</label>'+
+      (has && !v.avaBusy ? '<button type="button" class="link" id="avaDel" style="font-size:15px;color:var(--dg)">Убрать фото</button>' : '')+
+      '<span class="muted" style="font-size:13px;line-height:1.4">Видно в объявлениях. Лучше всего — лицо или логотип.</span></div>'+
+    '<input id="avaF" type="file" accept="image/*" hidden></div>';
+}
+function bindAvaEdit(v, keep){
+  var f = document.getElementById('avaF');
+  f.addEventListener('change', function(){
+    var file = f.files && f.files[0]; if(!file) return;
+    squareAva(file).then(function(blob){
+      keep();
+      if(v.avaUrl) URL.revokeObjectURL(v.avaUrl);
+      v.avaUrl = URL.createObjectURL(blob);
+      if(v.isNew){ v.avaBlob = blob; return profEditView(); }   // для нового профиля — загрузим после создания
+      v.avaBusy = true; profEditView();
+      return saveAvatar(blob, v.p && v.p.avatar_path).then(function(path){
+        v.p = Object.assign({}, v.p, {avatar_path:path}); v.avaBusy = false; toast('Фото сохранено');
+        if(view===v) profEditView();
+      }, function(err){
+        v.avaBusy = false; URL.revokeObjectURL(v.avaUrl); v.avaUrl = null; toast(dbMsg(err)||'Не получилось загрузить фото');
+        if(view===v) profEditView();
+      });
+    }, function(err){ toast(err.message); });
+  });
+  var del = document.getElementById('avaDel');
+  if(del) del.onclick = function(){
+    keep();
+    if(v.isNew || !(v.p && v.p.avatar_path)){ if(v.avaUrl) URL.revokeObjectURL(v.avaUrl); v.avaUrl = null; v.avaBlob = null; return profEditView(); }
+    var old = v.p.avatar_path;
+    sb.from('profiles').update({avatar_path:null}).eq('id', uid()).then(function(r){
+      if(r.error) return toast(dbMsg(r.error));
+      sb.storage.from('photos').remove([old]);
+      if(v.avaUrl) URL.revokeObjectURL(v.avaUrl);
+      v.avaUrl = null; v.p = Object.assign({}, v.p, {avatar_path:null}); S.myAva = null; tabs(); toast('Фото убрано');
+      if(view===v) profEditView();
+    });
+  };
+}
+
 /* ---------- профиль мастера: создание и правка ---------- */
 function profEditView(){
   var v = view, p = v.p || {};
   v.kind = v.kind || p.kind || 'person';
   v.travels = v.travels!=null ? v.travels : !!p.travels;
   app.innerHTML =
-    '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">'+(v.isNew?'Профиль мастера':'Мой профиль')+'</span><span style="width:60px"></span></div>'+
+    '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">'+(v.isNew?'Профиль мастера':'Мой профиль')+'</span>'+markBtn()+'</div>'+
     '<form id="pf" style="display:flex;flex-direction:column;gap:18px">'+
+    avaEditHtml(v, p)+
     '<div class="chips" role="group" aria-label="Кто вы"><button type="button" class="chip" data-kind="person" aria-pressed="'+(v.kind==='person')+'">Частный мастер</button><button type="button" class="chip" data-kind="org" aria-pressed="'+(v.kind==='org')+'">Организация</button></div>'+
     '<label class="field"><span>'+(v.kind==='org'?'Название для объявлений':'Имя и фамилия')+'</span><input id="fn" class="inp" required minlength="2" maxlength="80" value="'+esc(p.display_name||'')+'" placeholder="'+(v.kind==='org'?'Чистый двор':'Иван Петров')+'"></label>'+
     (v.kind==='org'?'<label class="field"><span>Юридическое название (необязательно)</span><input id="fo" class="inp" maxlength="120" value="'+esc(p.org_name||'')+'" placeholder="ИП Захаров А. С."></label>':'')+
@@ -217,6 +292,7 @@ function profEditView(){
   function keep(){ p = Object.assign({}, p, {display_name:val('fn'), org_name:val('fo'), city_id:Number(val('fc')), about:val('fa'), travel_note:val('ft')}); v.p = p; }
   function val(id){ var e=document.getElementById(id); return e?e.value.trim():(id==='fo'?p.org_name:id==='ft'?p.travel_note:''); }
   document.getElementById('bk').onclick = back;
+  bindAvaEdit(v, keep);
   app.querySelectorAll('[data-kind]').forEach(function(b){ b.onclick = function(){ keep(); v.kind=b.getAttribute('data-kind'); profEditView(); }; });
   document.getElementById('ftr').onclick = function(){ keep(); v.travels=!v.travels; profEditView(); };
   document.getElementById('pf').addEventListener('submit', function(e){
@@ -229,7 +305,8 @@ function profEditView(){
     var q = v.isNew ? sb.from('profiles').insert(Object.assign({id:uid()}, row)) : sb.from('profiles').update(row).eq('id', uid());
     q.then(function(r){
       if(r.error){ btn.disabled=false; return toast(dbMsg(r.error)||'Не получилось сохранить'); }
-      var next = v.isNew ? sb.from('consents').insert({kind:'pd_distribution', doc_version:DOC_VERSION}) : Promise.resolve();
+      var next = v.isNew ? sb.from('consents').insert({kind:'pd_distribution', doc_version:DOC_VERSION})
+        .then(function(){ return v.avaBlob ? saveAvatar(v.avaBlob, null).catch(function(){ toast('Фото не загрузилось — добавьте его ещё раз в профиле'); }) : null; }) : Promise.resolve();
       return next.then(function(){
         toast(v.isNew?'Профиль создан. Добавьте первое направление':'Сохранено');
         S.stack = []; view = v.isNew ? {name:'sphere', isNew:true} : {name:'cab'}; if(v.isNew) S.stack=[{name:'cab'}]; render(); window.scrollTo(0,0);
@@ -288,7 +365,7 @@ function sphereNewView(v){
   var svLimit = v.lim.services_per_sphere, phLimit = v.lim.photos_per_sphere, pro = v.pro, h = svcHints(d.cat);
   d.files.forEach(function(f){ if(!f.url) f.url = URL.createObjectURL(f.file); });
   app.innerHTML =
-    '<div class="topbar"><button type="button" class="back" id="bk">Отмена</button><span class="ttl">Новое направление</span><span style="width:60px"></span></div>'+
+    '<div class="topbar"><button type="button" class="back" id="bk">Отмена</button><span class="ttl">Новое направление</span>'+markBtn()+'</div>'+
     '<label class="field"><span>Сфера деятельности</span>'+catSelect(d.cat)+'</label>'+
     '<label class="field"><span>Коротко о работе</span><textarea id="ed" class="inp" maxlength="2000" placeholder="Опыт, инструмент, где работаете">'+esc(d.desc)+'</textarea></label>'+
     '<section><div class="between" style="align-items:baseline;margin-bottom:8px"><span class="lbl">Услуги и цены</span><span class="muted" style="font-size:12px">'+d.svs.length+(svLimit?' из '+svLimit+(pro?'':' · в Про без лимита'):' · без лимита')+'</span></div>'+
@@ -317,10 +394,11 @@ function sphereNewView(v){
   var ec = document.getElementById('ec'), ed = document.getElementById('ed');
   ec.addEventListener('change', function(){ d.cat = Number(ec.value); applyHints(d.cat); });
   ed.addEventListener('input', function(){ d.desc = ed.value; });
-  document.getElementById('bk').onclick = function(){
-    if(!d.svs.length && !d.files.length && !d.desc.trim()) return back();
-    confirmSheet('Выйти без сохранения?', 'Введённые услуги и фото не сохранятся.', 'Выйти', back);
+  v.leave = function(next){
+    if(!d.svs.length && !d.files.length && !d.desc.trim()) return next();
+    confirmSheet('Выйти без сохранения?', 'Введённые услуги и фото не сохранятся.', 'Выйти', next);
   };
+  document.getElementById('bk').onclick = function(){ v.leave(back); };
   var af = document.getElementById('af');
   if(af) af.addEventListener('submit', function(e){
     e.preventDefault();
@@ -392,7 +470,7 @@ function sphereView(){
     var stt = sphereState(s, pro);
     var svLimit = lim.services_per_sphere, phLimit = lim.photos_per_sphere, h = svcHints(s.category_id);
     app.innerHTML =
-      '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">Направление</span><span style="width:60px"></span></div>'+
+      '<div class="topbar"><button type="button" class="back" id="bk">'+svg(I.back,22,2)+'Кабинет</button><span class="ttl">Направление</span>'+markBtn()+'</div>'+
       '<div style="font-size:14px;color:'+stt.c+'">'+esc(stt.t)+'</div>'+
       '<form id="ef" style="display:flex;flex-direction:column;gap:14px">'+
       '<label class="field"><span>Сфера деятельности</span>'+catSelect(s.category_id)+'</label>'+
@@ -499,7 +577,7 @@ function sphereView(){
 /* ---------- отзыв, жалоба, ответ на отзыв ---------- */
 var RATE_LBL = ['Плохо','Так себе','Нормально','Хорошо','Отлично'];
 function whoBlock(p, line){
-  return '<div class="who"><span class="ava" style="background:'+avColor(p.id)+'">'+esc(initials(p.display_name))+'</span>'+
+  return '<div class="who"><span class="ava" style="background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</span>'+
     '<span class="stack"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px" id="whoLine">'+(line||'&nbsp;')+'</span></span></div>';
 }
 function reviewSheet(p){
