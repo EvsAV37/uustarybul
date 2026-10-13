@@ -1,0 +1,54 @@
+# Уустары бул — добавки к официальному docker-compose.yml Supabase (self-hosted/v0.8.2).
+# Подключается через COMPOSE_FILE=docker-compose.yml:docker-compose.ub.yml в /opt/supabase/.env.
+# Копию сюда кладёт server/deploy.sh — править здесь, в репозитории.
+
+services:
+
+  # Наружу смотрит только Caddy (HTTPS). Шлюз API — только внутри.
+  api-gw:
+    ports: !reset []
+
+  # Не используем: realtime (живые обновления) и пул соединений (он ещё и открывал бы порт базы наружу)
+  realtime:
+    profiles: ["off"]
+  supavisor:
+    profiles: ["off"]
+
+  # Секреты функций (Zvonok и т. п.) — в /opt/supabase/functions.env, задаются на сервере командой ub-secret
+  functions:
+    env_file:
+      - path: ./functions.env
+        required: false
+
+  caddy:
+    container_name: supabase-caddy
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      - "8443:8443"
+    depends_on:
+      api-gw:
+        condition: service_healthy
+    environment:
+      PROXY_DOMAIN: ${PROXY_DOMAIN}
+      STUDIO_DOMAIN: ${STUDIO_DOMAIN}
+      PROXY_AUTH_USERNAME: ${DASHBOARD_USERNAME}
+      PROXY_AUTH_PASSWORD: ${DASHBOARD_PASSWORD}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        PROXY_AUTH_PASSWORD=$$(caddy hash-password --plaintext "$$PROXY_AUTH_PASSWORD") && \
+        caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - ./ub/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/ub/site:/srv/site:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

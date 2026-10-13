@@ -1,0 +1,34 @@
+# Уустары бул — Caddy: HTTPS (Let's Encrypt, сам продлевает), сайт и API на одном адресе.
+# PROXY_DOMAIN — адреса сайта через запятую, STUDIO_DOMAIN — адрес панели Supabase (с портом 8443).
+
+{$PROXY_DOMAIN} {
+	encode zstd gzip
+
+	@api path /auth/v1/* /rest/v1/* /graphql/v1 /storage/v1/* /functions/v1/*
+	handle @api {
+		reverse_proxy api-gw:8000
+	}
+
+	handle {
+		root * /srv/site
+		@nocache path / /index.html /sw.js /manifest.webmanifest
+		header @nocache Cache-Control "no-cache"
+		file_server
+	}
+
+	header {
+		-server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+# Панель Supabase (Studio) — только по паролю
+{$STUDIO_DOMAIN} {
+	basic_auth {
+		{$PROXY_AUTH_USERNAME} {$PROXY_AUTH_PASSWORD}
+	}
+	reverse_proxy studio:3000
+	header -server
+}

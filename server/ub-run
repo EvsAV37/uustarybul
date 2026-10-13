@@ -1,0 +1,31 @@
+#!/bin/bash
+# Уустары бул — единственная команда, которую GitHub Actions может выполнить на сервере.
+# Ключ deploy в authorized_keys привязан к /usr/local/bin/ub-ssh, тот вызывает: sudo ub-run "<команда>".
+#   deploy <sha>  — на входе tar.gz репозитория; распаковать и выполнить server/deploy.sh из него
+#   status        — состояние контейнеров, памяти и диска
+set -euo pipefail
+[ "${1:-}" = "--" ] && shift
+read -r action arg rest <<<"${1:-}"
+
+case "${action:-}" in
+  deploy)
+    [[ "${arg:-}" =~ ^[0-9a-f]{40}$ ]] || { echo "deploy: нужен sha коммита"; exit 2; }
+    exec 9>/run/ub-deploy.lock
+    flock -w 600 9 || { echo "deploy: другая выкладка не закончилась"; exit 3; }
+    rel=/opt/ub/releases/$arg
+    rm -rf "$rel"; mkdir -p "$rel"
+    tar -xzf - -C "$rel"
+    [ -f "$rel/server/deploy.sh" ] || { echo "deploy: в архиве нет server/deploy.sh"; exit 2; }
+    ln -sfn "$rel" /opt/ub/current
+    # хранить 3 последние версии
+    ls -1dt /opt/ub/releases/*/ 2>/dev/null | tail -n +4 | xargs -r rm -rf
+    UB_SHA="$arg" exec bash "$rel/server/deploy.sh"
+    ;;
+  status)
+    cd /opt/supabase
+    docker compose ps --format 'table {{.Service}}\t{{.Status}}'
+    echo; free -m; echo; df -h / | tail -1
+    ;;
+  *)
+    echo "неизвестная команда"; exit 2 ;;
+esac

@@ -3,7 +3,7 @@
    Значки и шрифты: из кеша, в фоне обновляются.
    Запросы к Supabase не трогаем — данные всегда свежие.
    Push: показывает уведомление, по нажатию открывает кабинет. */
-var VERSION = 'ub-v7';
+var VERSION = 'ub-v8';
 var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp'];
 
 var OFFLINE_HTML = '<!doctype html><html lang="ru"><head><meta charset="utf-8">' +
@@ -50,6 +50,8 @@ self.addEventListener('fetch', function (e) {
   var own = url.origin === self.location.origin;
   var font = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (!own && !font) return; // Supabase и всё остальное — напрямую в сеть
+  // На своём сервере API живёт на том же адресе — его запросы тоже только в сеть
+  if (own && /^\/(rest|auth|storage|functions|realtime)\/v1\//.test(url.pathname)) return;
 
   e.respondWith(caches.open(VERSION).then(function (c) {
     return c.match(req).then(function (hit) {

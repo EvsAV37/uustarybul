@@ -1,0 +1,64 @@
+# Уустары бул — выкладка на свой сервер после каждого изменения в main.
+# Архив коммита уходит по SSH пользователю deploy; на сервере ключ привязан к одной команде (ub-run).
+# Результат: аннотация в запуске и файл last.txt в ветке server-log.
+# Секрет SERVER_SSH печатает server/install.sh в конце установки.
+name: server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: server
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HOST: 45.150.10.178
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: deploy
+        env:
+          SERVER_SSH: ${{ secrets.SERVER_SSH }}
+        run: |
+          if [ -z "$SERVER_SSH" ]; then
+            echo "::warning title=server::Секрет SERVER_SSH не задан — выкладка на сервер пропущена"
+            exit 0
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SERVER_SSH" | base64 -d | jq -r .k > ~/.ssh/ub && chmod 600 ~/.ssh/ub
+          echo "$HOST $(echo "$SERVER_SSH" | base64 -d | jq -r .h)" > ~/.ssh/known_hosts
+          set +e
+          git archive --format=tar.gz HEAD \
+            | ssh -i ~/.ssh/ub -o IdentitiesOnly=yes -o ConnectTimeout=30 -o ServerAliveInterval=30 \
+                  -o StrictHostKeyChecking=yes deploy@"$HOST" "deploy $GITHUB_SHA" > out.txt 2>&1
+          rc=$?
+          set -e
+          cat out.txt
+          echo "rc=$rc" >> out.txt
+          msg=$(tail -c 3500 out.txt | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
+          if [ $rc = 0 ]; then echo "::notice title=server OK::$msg"; else echo "::error title=server FAIL::$msg"; fi
+          echo "$rc" > rc.txt
+
+      - name: log
+        if: always()
+        run: |
+          [ -f out.txt ] || exit 0
+          d=$(mktemp -d); cp out.txt "$d/last.txt"; cd "$d"
+          git init -q && git checkout -q -b server-log
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add last.txt && git commit -q -m "server ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" server-log
+
+      - name: result
+        run: |
+          [ -f rc.txt ] || exit 0
+          exit "$(cat rc.txt)"

@@ -1,16 +1,32 @@
 # Сборка index.html из src/ — один файл со встроенной библиотекой Supabase.
-# Запуск: python3 build.py   (нужны python3 и npm)
-import os, subprocess, tarfile
+# Запуск: python3 build.py   (нужен python3; npm не обязателен)
+# Для своего сервера: UB_SB_KEY=<anon key> python3 build.py — API на том же адресе, что и сайт.
+# UB_VENDOR_DIR — где хранить скачанную библиотеку (по умолчанию ./vendor).
+import os, subprocess, tarfile, shutil, urllib.request, io
 ROOT = os.path.dirname(os.path.abspath(__file__))
 VER = '2.45.4'
-lib_path = os.path.join(ROOT, 'vendor', 'package', 'dist', 'umd', 'supabase.js')
+VENDOR = os.environ.get('UB_VENDOR_DIR') or os.path.join(ROOT, 'vendor')
+lib_path = os.path.join(VENDOR, 'package', 'dist', 'umd', 'supabase.js')
 if not os.path.exists(lib_path):
-    os.makedirs(os.path.join(ROOT, 'vendor'), exist_ok=True)
-    subprocess.run(['npm', 'pack', f'@supabase/supabase-js@{VER}', '--silent'], cwd=os.path.join(ROOT, 'vendor'), check=True)
-    with tarfile.open(os.path.join(ROOT, 'vendor', f'supabase-supabase-js-{VER}.tgz')) as t:
-        t.extractall(os.path.join(ROOT, 'vendor'))
+    os.makedirs(VENDOR, exist_ok=True)
+    tgz = os.path.join(VENDOR, f'supabase-supabase-js-{VER}.tgz')
+    if shutil.which('npm'):
+        subprocess.run(['npm', 'pack', f'@supabase/supabase-js@{VER}', '--silent'], cwd=VENDOR, check=True)
+    else:
+        with urllib.request.urlopen(f'https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-{VER}.tgz', timeout=60) as r, open(tgz, 'wb') as f:
+            f.write(r.read())
+    with tarfile.open(tgz) as t:
+        t.extractall(VENDOR)
 rd = lambda p: open(os.path.join(ROOT, p), encoding='utf8').read()
 src = rd('src/app.html').replace('/*CABINET*/', rd('src/cabinet.js')).replace('/*LOGIN*/', rd('src/login.js')).replace('/*SETTINGS*/', rd('src/settings.js'))
+SB_KEY = os.environ.get('UB_SB_KEY')
+if SB_KEY:  # свой сервер: API на том же адресе, ключ — с сервера
+    old_url = "var SB_URL = 'https://icojobutpjjvsjkizaak.supabase.co';"
+    assert old_url in src, 'не найден SB_URL в app.html'
+    src = src.replace(old_url, 'var SB_URL = location.origin;')
+    import re as _re
+    src, n = _re.subn(r"var SB_KEY = '[^']*';", "var SB_KEY = '" + SB_KEY + "';", src)
+    assert n == 1, 'не найден SB_KEY в app.html'
 lib = open(lib_path, encoding='utf8').read()
 # UMD-сборка не умеет работать встроенной в страницу — чиним определение publicPath
 old = 'if(!e)throw new Error("Automatic publicPath is not supported in this browser");'
