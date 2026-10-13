@@ -101,3 +101,12 @@ begin
   select phone into v_phone from public.profile_contacts where profile_id = p_profile;
   return v_phone;
 end $$;
+
+-- Чистка старых записей. Supabase от Claude удаление не принимает — выполнить самому в SQL-редакторе:
+-- create or replace function public.guard_cleanup()
+-- returns void language sql security definer set search_path = '' as $$
+--   delete from public.pow_used where created_at < now() - interval '1 day';
+--   delete from public.guard_log where created_at < now() - interval '2 days';
+-- $$;
+-- revoke execute on function public.guard_cleanup() from public, anon, authenticated;
+-- select cron.schedule('uustarybul-guard-cleanup', '20 0 * * *', 'select public.guard_cleanup()');
