@@ -205,7 +205,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px;display:flex;align-items:center;gap:12px}
 .logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
 /* заставка при запуске (совпадает с картинкой запуска iPhone) */
-#splash{position:fixed;inset:0;z-index:100;background:#0A1A2E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .35s ease}
+#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .35s ease}
 #splash img{width:42vw;max-width:240px;height:auto;animation:spIn .6s cubic-bezier(.2,.8,.2,1) both}
 #splash .sp-name{color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;height:32px;line-height:32px;animation:spUp .5s .3s ease-out both}
 #splash.out{opacity:0;pointer-events:none}
@@ -1634,7 +1634,7 @@ function contact(pid, sid, kind){
 /* ---------- старт ---------- */
 // Заставка: не меньше 0,9 с от открытия (чтобы не мигала), не больше 3 с
 var splashEl = document.getElementById('splash');
-if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0A1A2E');
+if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A1B1F');
 function hideSplash(){
   if(!splashEl) return;
   var el = splashEl; splashEl = null;
