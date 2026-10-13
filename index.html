@@ -690,6 +690,17 @@ function favView(){
 /* ---------- кабинет мастера ---------- */
 var DAY = 86400000;
 function dmy(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()]; }
+function dmyY(iso){ return dmy(iso)+' '+new Date(iso).getFullYear(); }
+// Про бесплатно для всех мастеров до даты из app_settings (решено 13.10.2026); '' — бесплатный период закончился
+var FREE_PRO = null;
+function loadFreePro(){
+  if(FREE_PRO!==null) return Promise.resolve(FREE_PRO);
+  return sb.from('app_settings').select('free_pro_until').maybeSingle().then(function(r){
+    var d = r.data && r.data.free_pro_until;
+    FREE_PRO = d && new Date(d) > new Date() ? d : '';
+    return FREE_PRO;
+  }, function(){ return ''; });
+}
 function daysLeft(iso){ return Math.max(0, Math.ceil((new Date(iso)-Date.now())/DAY)); }
 function uid(){ return S.session && S.session.user ? S.session.user.id : null; }
 function dbMsg(e){
@@ -781,22 +792,24 @@ function cabView(){
   if(!isRegistered()){
     app.innerHTML = cabHead()+''+
       '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Станьте мастером на Уустары бул</div>'+
-      '<div class="muted" style="font-size:15px;line-height:1.5">Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.</div></div>'+
+      '<div class="muted" style="font-size:15px;line-height:1.5" id="proTxt">Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.</div></div>'+
       '<button type="button" class="btn pr" id="lg">Войти по номеру</button>'+
       '<div class="muted" style="font-size:13px;line-height:1.45">Вход нужен и заказчикам — чтобы сохранять мастеров в избранное, оставлять отзывы и жалобы.</div>'+settingsBlock(false);
     document.getElementById('lg').onclick = function(){ loginSheet(function(){ render(); }); };
     bindSettings(null);
+    loadFreePro().then(function(f){ var t=document.getElementById('proTxt'); if(f && t) t.textContent = 'Сейчас Про бесплатно для всех мастеров до '+dmyY(f)+': до 5 направлений, в каждом услуги без лимита и до 30 фото, статистика просмотров и звонков.'; });
     return;
   }
   app.innerHTML = cabHead()+'<div class="skel" style="height:64px"></div><div class="skel" style="height:160px"></div>';
-  loadMine().then(function(m){
+  Promise.all([loadMine(), loadFreePro()]).then(function(rr){
+    var m = rr[0], free = rr[1];
     if(view!==v) return;
     v.m = m;
     var p = m.p;
     if(!p){
       app.innerHTML = cabHead()+''+
         '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Вы вошли как заказчик</div>'+
-        '<div class="muted" style="font-size:15px;line-height:1.5">Чтобы предлагать свои услуги, создайте профиль мастера. Это бесплатно, а после первой публикации — 3 месяца Про в подарок.</div></div>'+
+        '<div class="muted" style="font-size:15px;line-height:1.5">Чтобы предлагать свои услуги, создайте профиль мастера. '+(free?'Это бесплатно, а до '+dmyY(free)+' — сразу с Про.':'Это бесплатно, а после первой публикации — 3 месяца Про в подарок.')+'</div></div>'+
         '<button type="button" class="btn pr" id="np">Создать профиль мастера</button>'+settingsBlock(false);
       document.getElementById('np').onclick = function(){ go({name:'profEdit', isNew:true}); };
       bindSettings(null);
@@ -814,13 +827,17 @@ function cabView(){
     if(p.deleted_at){
       html += '<div class="warn"><span style="color:var(--dg);flex:none">'+svg(I.warn,22)+'</span><div>Аккаунт будет удалён '+dmy(new Date(new Date(p.deleted_at).getTime()+7*DAY).toISOString())+'. Профиль уже скрыт. <button type="button" id="undel" class="link" style="color:inherit">Отменить удаление</button></div></div>';
     }
-    if(pro){
+    var tiles = '<div class="tiles"><div class="tile"><div class="muted" style="font-size:13px">Просмотры</div><b>'+m.stats.views+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div>'+
+        '<div class="tile"><div class="muted" style="font-size:13px">Звонки</div><b>'+m.stats.contacts+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div></div>';
+    if(pro && free && new Date(p.pro_until) <= new Date(free)){
+      html += '<div class="card"><div class="row" style="gap:8px"><span class="badge">ПРО</span><span class="muted" style="font-size:14px">бесплатно для всех мастеров</span></div>'+
+        '<div style="font-size:22px;font-weight:700;margin:10px 0">До '+dmyY(p.pro_until)+'</div>'+
+        '<div class="muted" style="font-size:13px;line-height:1.45">До 5 направлений, услуги без лимита, до 30 фото, карточки продлеваются сами. Потом — 990 ₽ в месяц или 2 490 ₽ за 3 месяца, без автосписаний. Напомним за 30 и за 7 дней.</div></div>'+tiles;
+    } else if(pro){
       html += '<div class="card"><div class="row" style="gap:8px"><span class="badge">ПРО</span><span class="muted" style="font-size:14px">до '+dmy(p.pro_until)+'</span></div>'+
         '<div style="font-size:22px;font-weight:700;margin:10px 0">Ещё '+proDays+' '+plural(proDays,'день','дня','дней')+'</div>'+
         '<div class="pbar"><i style="width:'+Math.min(100,Math.round(proDays/90*100))+'%"></i></div>'+
-        '<div class="muted" style="font-size:13px;line-height:1.45;margin-top:10px">Без автосписаний. Напомним за 7 дней до конца.</div></div>'+
-        '<div class="tiles"><div class="tile"><div class="muted" style="font-size:13px">Просмотры</div><b>'+m.stats.views+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div>'+
-        '<div class="tile"><div class="muted" style="font-size:13px">Звонки</div><b>'+m.stats.contacts+'</b><div class="muted" style="font-size:12px">за 30 дней</div></div></div>';
+        '<div class="muted" style="font-size:13px;line-height:1.45;margin-top:10px">Без автосписаний. Напомним за 7 дней до конца.</div></div>'+tiles;
     } else {
       html += '<div class="card"><div class="row" style="gap:8px"><span class="badge">ПРО</span><span class="muted" style="font-size:14px">больше возможностей</span></div>'+
         '<div style="display:flex;flex-direction:column;gap:8px;margin:14px 0;font-size:15px">'+
@@ -858,7 +875,7 @@ function cabView(){
     html += settingsBlock(true);
     app.innerHTML = html;
     document.getElementById('me').onclick = function(){ go({name:'profile', id:p.id, from:'Кабинет', own:true}); };
-    var b = document.getElementById('buy'); if(b) b.onclick = function(){ toast('Оплата появится позже. Сейчас Про даётся бесплатно на 3 месяца после первой публикации.'); };
+    var b = document.getElementById('buy'); if(b) b.onclick = function(){ toast('Оплата появится позже.'); };
     var ud = document.getElementById('undel'); if(ud) ud.onclick = function(){ sb.rpc('cancel_account_deletion').then(function(){ toast('Удаление отменено'); cabView(); }); };
     var ar = document.getElementById('allRev'); if(ar) ar.onclick = function(){ v.allRev=true; cabView(); };
     document.getElementById('newSp').onclick = function(){ go({name:'sphere', isNew:true}); };
