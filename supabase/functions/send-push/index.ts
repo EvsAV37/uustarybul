@@ -11,7 +11,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { generateVapid, sendPush, type Vapid } from './webpush.ts';
 
-const SUBJECT = Deno.env.get('PUSH_SUBJECT') || 'https://evsav37.github.io/uustarybul/';
+const SUBJECT = Deno.env.get('PUSH_SUBJECT') || 'https://uustarybul.ru/';
 const OPEN_URL = './?go=cab';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false }
