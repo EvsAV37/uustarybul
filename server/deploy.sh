@@ -88,7 +88,7 @@ echo "дата бесплатного Про: ${FREE_PRO:-нет}"
 if ( cd "$REL" && UB_SB_KEY="$ANON" UB_FREE_PRO="$FREE_PRO" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
   rsync -a --delete \
     --include=/index.html --include=/manifest.webmanifest --include=/sw.js \
-    --include=/icons/ --include='/icons/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
+    --include=/icons/ --include='/icons/**' --include=/fonts/ --include='/fonts/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
     --exclude='*' "$REL/" "$UB/site/"
   echo "выложен ($(du -sh "$UB/site" | cut -f1))"
 else bad "сборка build.py не прошла"; fi

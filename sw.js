@@ -1,10 +1,11 @@
 /* Уустары бул — service worker.
    Страница: сначала сеть (чтобы обновления приходили сразу), без сети — сохранённая копия.
-   Значки и шрифты: из кеша, в фоне обновляются.
+   Значки и шрифт (свой, fonts/): из кеша, в фоне обновляются.
    Запросы к Supabase не трогаем — данные всегда свежие.
    Push: показывает уведомление, по нажатию открывает кабинет. */
-var VERSION = 'ub-v8';
-var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp'];
+var VERSION = 'ub-v9';
+var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp',
+  'fonts/onest.css', 'fonts/onest-cyrillic.woff2', 'fonts/onest-latin.woff2'];
 
 var OFFLINE_HTML = '<!doctype html><html lang="ru"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1"><title>Уустары бул</title>' +
@@ -46,10 +47,9 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Свои файлы (значки, манифест) и шрифты Google
+  // Свои файлы (значки, манифест, шрифт)
   var own = url.origin === self.location.origin;
-  var font = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if (!own && !font) return; // Supabase и всё остальное — напрямую в сеть
+  if (!own) return; // Supabase и всё остальное — напрямую в сеть
   // На своём сервере API живёт на том же адресе — его запросы тоже только в сеть
   if (own && /^\/(rest|auth|storage|functions|realtime)\/v1\//.test(url.pathname)) return;
 

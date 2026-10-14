@@ -61,6 +61,7 @@ body{{margin:0;background:var(--bg);color:var(--fg);font-family:'Onest',system-u
 main{{max-width:720px;margin:0 auto;padding:16px 20px 48px}}
 a.back{{display:inline-flex;align-items:center;height:44px;font-size:16px;font-weight:500;color:inherit;text-decoration:none}}
 </style>
+<link rel="stylesheet" href="../fonts/onest.css">
 <link rel="stylesheet" href="doc.css">
 </head>
 <body><main><a class="back" href="../">‹ Уустары бул</a>
