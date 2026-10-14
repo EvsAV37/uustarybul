@@ -134,6 +134,13 @@ Deno.serve(async (req) => {
     if (!phone) return fail('Введите номер полностью, 10 цифр после +7');
     const isTest = !!TEST_LOGINS[phone] && Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
 
+    // Вход в управление (/admin): звоним только на номера администраторов — аккаунт не заводится, баланс не тратится
+    if (body.admin === true) {
+      const { data: isAdmin, error } = await admin.rpc('admin_phone_ok', { p_phone: phone });
+      if (error) throw new Error('admin check failed: ' + error.message);
+      if (!isAdmin) return fail('Этот номер не подключён к управлению', 403);
+    }
+
     const key = Deno.env.get('ZVONOK_PUBLIC_KEY') || '';
     const flash = Deno.env.get('ZVONOK_CAMPAIGN_FLASH') || '';
     const callback = Deno.env.get('ZVONOK_CAMPAIGN_CALLBACK') || '';

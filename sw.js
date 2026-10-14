@@ -3,7 +3,7 @@
    Значки и шрифт (свой, fonts/): из кеша, в фоне обновляются.
    Запросы к Supabase не трогаем — данные всегда свежие.
    Push: показывает уведомление, по нажатию открывает кабинет. */
-var VERSION = 'ub-v9';
+var VERSION = 'ub-v10';
 var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp',
   'fonts/onest.css', 'fonts/onest-cyrillic.woff2', 'fonts/onest-latin.woff2'];
 
@@ -31,6 +31,8 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
+  // Управление (/admin) — всегда из сети и мимо кеша: его копия не должна подменить приложение
+  if (/\/admin(\/|$)/.test(url.pathname)) return;
 
   // Страница приложения
   if (req.mode === 'navigate') {

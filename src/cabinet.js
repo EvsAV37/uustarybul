@@ -88,7 +88,7 @@ function loadMine(){
     sb.from('profiles').select('*').eq('id',id).maybeSingle(),
     sb.from('spheres').select('id,title,description,category_id,status,published_at,expires_at,created_at,services(id,is_hidden),photos(id,is_hidden)').eq('profile_id',id).order('created_at'),
     sb.rpc('profile_limits',{p_profile:id}),
-    sb.from('reviews').select('id,author_name,title,rating,body,reply,created_at,is_hidden').eq('profile_id',id).order('created_at',{ascending:false}),
+    sb.from('reviews').select('*').eq('profile_id',id).order('created_at',{ascending:false}),
     sb.from('stats_daily').select('views,contacts').eq('profile_id',id).gte('day',since)
   ]).then(function(r){
     var err = r[0].error||r[1].error;
@@ -149,6 +149,11 @@ function cabView(){
         '<span class="ava" style="width:64px;height:64px;border-radius:16px;font-size:22px;background:'+avColor(p.id)+'">'+avaFill(p.display_name, p.avatar_path)+'</span>'+
         '<span class="stack" style="flex:1"><span style="font-size:18px;font-weight:700">'+esc(p.display_name)+'</span><span class="muted" style="font-size:14px">Изменить профиль</span></span>'+
         '<span class="muted">'+svg('M9 6l6 6-6 6',20,2)+'</span></button>';
+    if(p.blocked_at && !p.deleted_at){
+      html += '<div class="warn"><span style="color:var(--dg);flex:none">'+svg(I.warn,22)+'</span><div>Профиль заблокирован после проверки жалоб и не показывается в поиске.</div></div>';
+    } else if(p.is_hidden && !p.deleted_at){
+      html += '<div class="warn"><span style="color:var(--dg);flex:none">'+svg(I.warn,22)+'</span><div>Профиль скрыт из поиска после жалоб. Заказчики его сейчас не видят.</div></div>';
+    }
     if(p.deleted_at){
       html += '<div class="warn"><span style="color:var(--dg);flex:none">'+svg(I.warn,22)+'</span><div>Аккаунт будет удалён '+dmy(new Date(new Date(p.deleted_at).getTime()+7*DAY).toISOString())+'. Профиль уже скрыт. <button type="button" id="undel" class="link" style="color:inherit">Отменить удаление</button></div></div>';
     }
@@ -190,7 +195,7 @@ function cabView(){
       html += '<section><h2 class="h2" style="font-size:20px;margin-bottom:10px">Отзывы обо мне</h2><div style="display:flex;flex-direction:column;gap:10px">'+
         m.reviews.slice(0, v.allRev?50:3).map(function(x){
           return '<div class="review"><div class="between" style="align-items:baseline"><div style="font-weight:600;font-size:15px">'+esc(x.title||x.author_name)+'</div><div class="muted" style="font-size:12px">'+shortDate(x.created_at)+'</div></div>'+
-            '<div style="font-size:12px;color:var(--v);margin:2px 0 8px">'+stars(x.rating)+(x.title?' · '+esc(x.author_name):'')+(x.is_hidden?' · скрыт после жалоб':'')+'</div>'+
+            '<div style="font-size:12px;color:var(--v);margin:2px 0 8px">'+stars(x.rating)+(x.title?' · '+esc(x.author_name):'')+(x.is_hidden?' · скрыт'+(x.hidden_reason==='insult'?' (оскорбление)':x.hidden_reason==='spam'?' (спам)':' после жалоб'):'')+'</div>'+
             (x.body?'<div style="font-size:14px;line-height:1.45;color:var(--v)">'+esc(x.body)+'</div>':'')+
             (x.reply?'<div class="reply"><div style="font-size:13px;font-weight:600">Ваш ответ</div><div class="muted" style="font-size:13px">'+esc(x.reply)+'</div></div>':'')+
             '<button type="button" class="link" data-reply="'+x.id+'" style="margin-top:10px;font-size:14px">'+(x.reply?'Изменить ответ':'Ответить')+'</button></div>';

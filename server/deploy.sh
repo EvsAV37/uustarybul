@@ -88,7 +88,7 @@ echo "дата бесплатного Про: ${FREE_PRO:-нет}"
 if ( cd "$REL" && UB_SB_KEY="$ANON" UB_FREE_PRO="$FREE_PRO" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
   rsync -a --delete \
     --include=/index.html --include=/manifest.webmanifest --include=/sw.js \
-    --include=/icons/ --include='/icons/**' --include=/fonts/ --include='/fonts/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
+    --include=/admin/ --include=/admin/index.html --include=/icons/ --include='/icons/**' --include=/fonts/ --include='/fonts/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
     --exclude='*' "$REL/" "$UB/site/"
   echo "выложен ($(du -sh "$UB/site" | cut -f1))"
 else bad "сборка build.py не прошла"; fi
@@ -99,6 +99,7 @@ docker compose ps --format '{{.Service}}: {{.Status}}' | sort
 HOSTN=${URL#https://}
 code() { curl -s -o /dev/null -m 15 -w '%{http_code}' --resolve "$HOSTN:443:127.0.0.1" "$@"; }
 c=$(code "$URL/");                                              echo "сайт $c";    [ "$c" = 200 ] || bad "сайт не отвечает"
+c=$(code "$URL/admin/");                                        echo "управление $c"; [ "$c" = 200 ] || bad "страница /admin не отвечает"
 c=$(code -H "apikey: $ANON" "$URL/rest/v1/cities?select=id&limit=1"); echo "API $c";     [ "$c" = 200 ] || bad "API не отвечает"
 c=$(code "$URL/auth/v1/health" -H "apikey: $ANON");             echo "вход $c";    [ "$c" = 200 ] || bad "сервис входа не отвечает"
 c=$(code -X POST -H 'Content-Type: application/json' -d '{"action":"challenge"}' "$URL/functions/v1/verify-phone"); echo "функции $c"; [ "$c" = 200 ] || bad "функция verify-phone не отвечает"

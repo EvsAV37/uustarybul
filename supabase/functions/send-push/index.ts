@@ -73,6 +73,16 @@ function text(kind: string, p: Record<string, unknown>, tz: string): { title: st
       return p.target_type === 'profile'
         ? { title: 'Профиль скрыт после жалоб', body: 'На профиль пожаловались несколько человек. Подробности в кабинете.' }
         : { title: 'Карточка скрыта после жалоб', body: 'На карточку пожаловались несколько человек. Подробности в кабинете.' };
+    case 'hidden_by_admin':
+      return p.target_type === 'profile'
+        ? { title: 'Профиль скрыт после проверки', body: 'Профиль не показывается в поиске. Подробности в кабинете.' }
+        : { title: 'Карточка скрыта после проверки', body: `${t} не показывается в поиске. Подробности в кабинете.` };
+    case 'restored':
+      return p.target_type === 'profile'
+        ? { title: 'Профиль снова в поиске', body: 'Мы проверили жалобы — профиль снова виден заказчикам.' }
+        : { title: 'Карточка снова в поиске', body: `Мы проверили жалобы — ${t} снова видна заказчикам.` };
+    case 'blocked':
+      return { title: 'Профиль заблокирован', body: 'После проверки жалоб профиль скрыт из поиска. Подробности в кабинете.' };
     default:
       return { title: 'Уустары бул', body: 'Откройте кабинет, там есть новости.' };
   }
@@ -100,7 +110,7 @@ async function runBatch(v: Vapid) {
     let st = 0;
     try {
       st = (await sendPush({ endpoint: r.r_endpoint, p256dh: r.r_p256dh, auth: r.r_auth }, msg, v, SUBJECT,
-        { ttl: 86400, urgency: r.r_kind === 'hidden_by_complaints' ? 'high' : 'normal' })).status;
+        { ttl: 86400, urgency: ['hidden_by_complaints','hidden_by_admin','blocked'].includes(r.r_kind) ? 'high' : 'normal' })).status;
     } catch (e) {
       st = String(e).includes('bad_keys') ? 400 : 0; // 0 — сеть/таймаут
     }

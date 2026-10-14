@@ -18,7 +18,8 @@ if not os.path.exists(lib_path):
     with tarfile.open(tgz) as t:
         t.extractall(VENDOR)
 rd = lambda p: open(os.path.join(ROOT, p), encoding='utf8').read()
-src = rd('src/app.html').replace('/*CABINET*/', rd('src/cabinet.js')).replace('/*LOGIN*/', rd('src/login.js')).replace('/*SETTINGS*/', rd('src/settings.js'))
+POW = rd('src/pow.js')  # вызов verify-phone и задачка для телефона — общие для приложения и /admin
+src = rd('src/app.html').replace('/*CABINET*/', rd('src/cabinet.js')).replace('/*LOGIN*/', rd('src/login.js').replace('/*POW*/', POW)).replace('/*SETTINGS*/', rd('src/settings.js'))
 SB_KEY = os.environ.get('UB_SB_KEY')
 if SB_KEY:  # свой сервер: API на том же адресе, ключ — с сервера
     old_url = "var SB_URL = 'https://icojobutpjjvsjkizaak.supabase.co';"
@@ -44,6 +45,18 @@ logo = 'data:image/webp;base64,' + base64.b64encode(open(os.path.join(ROOT, 'ico
 src = src.replace('/*LOGO_MARK*/', logo)  # знак заставки встроен в страницу — готов к первому кадру
 open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf8').write(src.replace('/*SUPABASE_UMD*/', lib))
 print('index.html собран')
+
+# Управление: src/admin.html → admin/index.html (отдельная страница, код админки не попадает к заказчикам).
+# Собирается только для своего сервера (UB_SB_KEY): в облачном прототипе функций админки нет.
+if SB_KEY:
+    adm = rd('src/admin.html').replace('/*POW*/', POW)
+    assert old_url in adm, 'не найден SB_URL в admin.html'
+    adm = adm.replace(old_url, 'var SB_URL = location.origin;')
+    adm, n = _re.subn(r"var SB_KEY = '[^']*';", "var SB_KEY = '" + SB_KEY + "';", adm)
+    assert n == 1, 'не найден SB_KEY в admin.html'
+    os.makedirs(os.path.join(ROOT, 'admin'), exist_ok=True)
+    open(os.path.join(ROOT, 'admin', 'index.html'), 'w', encoding='utf8').write(adm.replace('/*SUPABASE_UMD*/', lib))
+    print('admin/index.html собран')
 
 # Документы: docs/src/*.html → docs/*.html (отдельные страницы; приложение открывает их у себя на экране)
 import re, glob

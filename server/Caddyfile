@@ -12,8 +12,11 @@
 
 	handle {
 		root * /srv/site
-		@nocache path / /index.html /sw.js /manifest.webmanifest
+		@nocache path / /index.html /sw.js /manifest.webmanifest /admin/ /admin/index.html
 		header @nocache Cache-Control "no-cache"
+		# управление: не встраивать в чужие страницы, не индексировать
+		header /admin* X-Frame-Options "DENY"
+		header /admin* X-Robots-Tag "noindex, nofollow"
 		file_server
 	}
 
