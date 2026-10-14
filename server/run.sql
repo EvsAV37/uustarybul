@@ -1,29 +1,31 @@
--- Проверка справочников и даты Про (019) на сервере — всё внутри транзакции с откатом, в журнал только сводка
+-- Проверка защиты и журналов (020) на сервере — всё внутри транзакции с откатом, в журнал только сводка
 begin;
 select set_config('request.jwt.claims', '', true);
+-- журнал входа, как его пишет verify-phone
+set local role service_role;
+select public.guard_note('call', 'sent', 'check-1', '70000000003', 'flash', false, true, 'проверка');
+select public.guard_result('check-1', '70000000003', 'ok');
+select public.guard_note('call', 'pow', 'check-2', '70000000003', 'flash', false, true, 'проверка');
+select public.guard_note('guest', 'ok');
+reset role;
+select 'login_log' k, string_agg(result, ', ' order by id) from public.login_log where session_key like 'check-%';
 -- временный владелец — демо-мастер (откатится)
 insert into public.admins (user_id, role) select id, 'owner' from public.profiles where is_demo order by created_at limit 1;
 select set_config('request.jwt.claims', json_build_object('sub', (select id from public.profiles where is_demo order by created_at limit 1),
-  'session_id', '00000000-0000-4000-8000-000000000001', 'is_anonymous', false, 'role', 'authenticated')::text, true);
+  'session_id', '00000000-0000-4000-8000-000000000002', 'is_anonymous', false, 'role', 'authenticated')::text, true);
 set local role authenticated;
-select 'set_pw' k, public.admin_set_password('проверка-пароля-1') ->> 'ok' ok;
-select 'dirs' k, jsonb_array_length(d -> 'categories') cats, jsonb_array_length(d -> 'cities') cities,
-       jsonb_array_length(d -> 'tz') tz, d -> 'free_pro' ->> 'pro_now' pro_now
-  from (select public.admin_dirs(null) d) x;
-select 'new_cat' k, r ->> 'slug' slug, r ->> 'keywords' kw
-  from (select public.admin_category_save(null, '{"name":"Проверка сферы","name_plural":"Проверки сферы","grp":"Услуги","sort":9990,"keywords":"Проверка, проверка тест"}') r) x;
-select 'new_city' k, r ->> 'tz' tz from (select public.admin_city_save(null, '{"name":"Проверочный","region":"Проверка","tz":"Asia/Yakutsk","sort":9990,"is_active":false}') r) x;
-select 'fp_dry' k, r ->> 'profiles' profiles, r ->> 'saved' saved
-  from (select public.admin_free_pro_set(((select free_pro_until from public.app_settings) at time zone 'Asia/Yakutsk')::date + 30, true) r) x;
-select 'fp_save' k, r ->> 'profiles' profiles
-  from (select public.admin_free_pro_set(((select free_pro_until from public.app_settings) at time zone 'Asia/Yakutsk')::date + 30, false) r) x;
+select 'set_pw' k, public.admin_set_password('проверка-пароля-2') ->> 'ok' ok;
+select 'security' k, (s -> 'today') ->> 'calls' calls, (s -> 'today') ->> 'bots' bots, jsonb_array_length(s -> 'chart') chart, (s -> 'alert') ->> 'on' alert
+  from (select public.admin_security() s) x;
+select 'pd_new' k, r ->> 'due_on' due from (select public.admin_pd_save(null, '{"kind":"access","received_on":"2026-10-14","contact":"проверка"}') r) x;
+select 'pd_list' k, jsonb_array_length(public.admin_pd_list('open')) open;
+select 'journal' k, jsonb_array_length(public.admin_journal('logins', null, 5) -> 'rows') logins,
+       jsonb_array_length(public.admin_journal('actions', null, 5) -> 'rows') actions;
+select 'overview' k, (public.admin_overview(null, 7) -> 'system') ->> 'pd_open' pd_open, public.admin_badges(null) ->> 'pd_urgent' urgent;
 reset role;
-select 'fp_moved' k, count(*) filter (where pro_until = (select free_pro_until from public.app_settings)) moved, count(*) total
-  from public.profiles where deleted_at is null;
-select 'log' k, string_agg(action, ', ' order by id) from public.admin_log where action in ('category_create','city_create','free_pro_set');
-select 'anon' k, has_function_privilege('anon', 'public.admin_dirs(int)', 'execute') dirs,
-       has_function_privilege('anon', 'public.admin_free_pro_set(date,boolean)', 'execute') free_pro;
+select 'anon' k, has_function_privilege('anon', 'public.admin_security()', 'execute') sec,
+       has_function_privilege('authenticated', 'public.guard_note(text,text,text,text,text,boolean,boolean,text)', 'execute') note,
+       has_table_privilege('authenticated', 'public.login_log', 'select') tbl;
+select 'cron' k, count(*) from cron.job where jobname = 'uustarybul-security-cleanup';
 rollback;
-select 'after_rollback' k, (select count(*) from public.admins) admins,
-       (select free_pro_until at time zone 'Asia/Yakutsk' from public.app_settings) free_pro,
-       (select count(*) from public.categories) cats, (select count(*) from public.cities) cities;
+select 'after_rollback' k, (select count(*) from public.pd_requests) pd, (select count(*) from public.admins) admins;

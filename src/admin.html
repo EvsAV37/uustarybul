@@ -87,6 +87,7 @@ a.row:hover{color:var(--fg)}
 .bar>div{display:flex;gap:3px;align-items:flex-end;width:100%;justify-content:center;height:150px}
 .bar i{display:block;width:100%;max-width:28px;border-radius:6px 6px 2px 2px;background:var(--fg);min-height:2px}
 .bar i.s{background:var(--off)}
+.bar i.r{background:var(--dgt)}
 .bar span{font-size:11px;color:var(--mu);height:14px}
 .legend{display:flex;gap:16px}
 .legend span{display:flex;align-items:center;gap:6px}
@@ -176,6 +177,20 @@ select.in{appearance:none;-webkit-appearance:none;padding-right:34px;background-
 .bigv{font-size:30px;font-weight:700;letter-spacing:-.01em}
 .sets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 
+/* Защита и журналы */
+#xbody{display:flex;flex-direction:column;gap:24px}
+.cards2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.jhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.tblw.j table{min-width:640px}
+.tblw.j tbody tr{cursor:default}
+.tblw.j tbody tr:hover td{background:transparent}
+.tblw.j td.wrap{min-width:220px}
+.jl{display:none;flex-direction:column}
+.jl .it{min-height:48px}
+.tm{width:52px;flex:none}
+.pdk{font-weight:600}
+textarea.in{height:auto;min-height:96px;padding:12px 14px;resize:vertical;line-height:1.45}
+
 /* Окна */
 .scrim{position:fixed;inset:0;background:var(--scrim);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
 .sheet{background:var(--bg);border-radius:22px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
@@ -231,14 +246,19 @@ select.in{appearance:none;-webkit-appearance:none;padding-right:34px;background-
   .g3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .g3>.wide{grid-column:span 2}
   .in{font-size:16px}
-  .sets{grid-template-columns:minmax(0,1fr)}
+  .sets,.cards2{grid-template-columns:minmax(0,1fr)}
   .bigv{font-size:26px}
+  #xbody{gap:16px}
+  .seg.ponly button,#main .ponly>.seg button{flex:1}
+  .tblw.j{display:none}
+  .jl{display:flex}
+  .t34{display:none}
   #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
   .scrim{align-items:flex-end;padding:0}
   .sheet{border-radius:22px 22px 0 0;max-width:none;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 }
 @media (min-width:900px){ .ponly{display:none!important} }
-@media (min-width:900px) and (max-width:1199px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .cards3{grid-template-columns:minmax(0,1fr)} .rvs{grid-template-columns:repeat(2,minmax(0,1fr))} .main{padding:28px 28px 40px} .g3{grid-template-columns:repeat(2,minmax(0,1fr))} .sets{grid-template-columns:minmax(0,1fr)} }
+@media (min-width:900px) and (max-width:1199px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .cards3{grid-template-columns:minmax(0,1fr)} .rvs{grid-template-columns:repeat(2,minmax(0,1fr))} .cards2{grid-template-columns:minmax(0,1fr)} .main{padding:28px 28px 40px} .g3{grid-template-columns:repeat(2,minmax(0,1fr))} .sets{grid-template-columns:minmax(0,1fr)} }
 </style>
 </head>
 <body>
@@ -333,7 +353,11 @@ var ERR = { not_found:'Не найдено', bad_action:'Недопустимо�
   cat_exists:'Такая сфера уже есть', home_full:'На главной уже 8 плиток — сначала уберите одну', cat_in_use:'Скрыть нельзя: у мастеров есть направления этой сферы',
   city_name:'Название города — от 2 до 60 символов', city_region:'Регион — от 2 до 80 символов', city_tz:'Выберите часовой пояс', city_sort:'Порядок — число от 0 до 9999',
   city_exists:'Такой город уже есть', city_in_use:'Скрыть нельзя: в городе есть мастера', city_last:'Нужен хотя бы один город',
-  free_pro_date:'Выберите дату', free_pro_past:'Дата уже прошла', free_pro_earlier:'Можно только продлить: выберите дату позже нынешней', free_pro_far:'Не дальше чем на 3 года вперёд' };
+  free_pro_date:'Выберите дату', free_pro_past:'Дата уже прошла', free_pro_earlier:'Можно только продлить: выберите дату позже нынешней', free_pro_far:'Не дальше чем на 3 года вперёд',
+  pd_kind:'Выберите, что просят', pd_channel:'Выберите, откуда пришёл запрос', pd_date:'Дата получения — не позже сегодня и не раньше чем год назад',
+  pd_long:'Слишком длинный текст', pd_phone:'Номер: 10 цифр после +7', pd_who:'Укажите номер или как ответить заявителю',
+  pd_done:'Запрос уже выполнен', pd_no_extend:'Этот срок продлить нельзя', pd_extended:'Срок уже продлевали', pd_overdue:'Срок уже прошёл — продлевать поздно',
+  pd_note:'Коротко напишите, что ответили или сделали' };
 
 /* ---------- вход: номер → код → пароль ---------- */
 function gate(inner){ $('app').innerHTML = '<div class="gate"><div class="gbox"><div class="brand"><span class="logo" aria-hidden="true"></span>Уустары бул · Управление</div>'+inner+'</div></div>'; }
@@ -464,8 +488,8 @@ function boot(){
 }
 
 /* ---------- оболочка ---------- */
-var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['settings','Настройки','set']];
-var LATER = [['Рассылка','bell','скоро'],['Защита и журналы','shield','скоро'],['Платежи','card','с 2027']];
+var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['settings','Настройки','set'],['security','Защита и журналы','shield']];
+var LATER = [['Рассылка','bell','скоро'],['Платежи','card','с 2027']];
 function citySelect(id){
   return '<label class="citysel"><span class="d" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Город</span><select id="'+id+'" aria-label="Город">'+
     '<option value="">Все города</option>'+A.cities.map(function(c){ return '<option value="'+c.id+'"'+(A.city===c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>';
@@ -475,15 +499,16 @@ function shell(sec, html){
   var side = '<aside class="side"><div class="brand"><span class="logo" role="img" aria-label="Знак Уустары бул"></span><div style="display:flex;flex-direction:column"><b style="font-size:16px">Уустары бул</b><span class="d">Управление</span></div></div>'+
     citySelect('city')+
     '<nav class="nav" aria-label="Разделы">'+NAV.map(function(n){
-      var extra = n[0]==='masters' && b.masters!=null ? '<span class="cnt">'+b.masters+'</span>' : n[0]==='complaints' && b.complaints ? '<span class="badge">'+b.complaints+'</span>' : '';
+      var extra = n[0]==='masters' && b.masters!=null ? '<span class="cnt">'+b.masters+'</span>' : n[0]==='complaints' && b.complaints ? '<span class="badge">'+b.complaints+'</span>'
+        : n[0]==='security' && b.pd_urgent ? '<span class="badge">'+b.pd_urgent+'</span>' : '';
       return '<a href="#'+n[0]+'" class="'+(sec===n[0]?'on':'')+'"'+(sec===n[0]?' aria-current="page"':'')+'>'+ic(n[2])+n[1]+extra+'</a>'; }).join('')+
     LATER.map(function(n){ return '<span class="na" title="Появится позже">'+ic(n[1])+n[0]+'<span class="cnt">'+n[2]+'</span></span>'; }).join('')+
     '</nav><div class="foot">'+themeSeg('sm')+
     '<span><b style="color:var(--fg)">'+esc(A.me.phone||'')+'</b> · '+(A.me.role==='owner'?'владелец':'модератор')+'</span>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap"><a href="../" target="_blank" rel="noopener" style="font-weight:600">Открыть приложение ›</a><button type="button" class="link" data-act="pw" style="font-weight:500;color:var(--mu)">Пароль</button><button type="button" class="link" data-act="lock" style="font-weight:500;color:var(--mu)">Выйти</button></div></div></aside>';
-  var tsec = sec==='dirs'||sec==='settings' ? 'more' : sec;
+  var tsec = sec==='dirs'||sec==='settings'||sec==='security' ? 'more' : sec;
   var tabs = '<nav class="tabs" aria-label="Разделы">'+[['overview','Обзор','over'],['complaints','Жалобы','compl'],['masters','Мастера','masters'],['more','Ещё','more']].map(function(n){
-    var dot = n[0]==='complaints' && b.complaints ? '<span class="dot">'+b.complaints+'</span>' : '';
+    var dot = n[0]==='complaints' && b.complaints ? '<span class="dot">'+b.complaints+'</span>' : n[0]==='more' && b.pd_urgent ? '<span class="dot">'+b.pd_urgent+'</span>' : '';
     return '<a href="#'+n[0]+'" class="'+(tsec===n[0]?'on':'')+'"'+(tsec===n[0]?' aria-current="page"':'')+'>'+ic(n[2],24)+n[1]+dot+'</a>'; }).join('')+'</nav>';
   $('app').innerHTML = '<div class="shell">'+side+'<main class="main" id="main">'+html+'</main>'+tabs+'</div>';
   var cs = $('city'); if(cs) cs.onchange = function(){ setCity(cs.value); };
@@ -509,6 +534,10 @@ function paintBadges(){
   document.querySelectorAll('[data-ct]').forEach(function(x){ var t = CT.filter(function(c){ return c[0]===x.getAttribute('data-ct'); })[0];
     var n = t[0]==='open' && b.complaints ? ' · '+b.complaints : t[0]==='reviews' && b.reviews_new ? ' · '+b.reviews_new : ''; x.textContent = t[1]+n; });
   var r=$('rvn'); if(r) r.textContent = b.reviews_new||0;
+  document.querySelectorAll('.nav a[href="#security"], .tabs a[href="#more"], [data-pdu]').forEach(function(a){
+    var cls = a.closest('.tabs') ? 'dot' : 'badge', c = a.querySelector('.'+cls);
+    if(!b.pd_urgent){ if(c) c.remove(); return; }
+    if(!c){ c=document.createElement('span'); c.className=cls; if(a.hasAttribute('data-pdu')) a.insertBefore(c, a.lastElementChild); else a.appendChild(c); } c.textContent = b.pd_urgent; });
 }
 function loadBadges(){
   return rpc('admin_badges', {p_city:A.city}).then(function(b){
@@ -575,6 +604,7 @@ function route(){
   if(sec==='more') return pageMore();
   if(sec==='dirs') return pageDirs(h[1]||null, h[2]||null);
   if(sec==='settings') return pageSettings();
+  if(sec==='security') return h[1]==='pd' ? pagePd(h[2]||null) : pageSecurity();
   return pageOverview();
 }
 // Несохранённая правка справочника: перед уходом — спросить
@@ -632,22 +662,27 @@ function pageOverview(){
       ch.map(function(x,i){ var d=new Date(x.day);
         return '<div class="bar" title="'+esc(dm(x.day)+' · звонков '+x.contacts+' · поисков '+x.searches)+'"><div><i style="height:'+Math.round(x.contacts/mx*100)+'%"></i><i class="s" style="height:'+Math.round(x.searches/k/mx*100)+'%"></i></div><span>'+(!many || i%5===(ch.length-1)%5 ? d.getDate() : '')+'</span></div>'; }).join('')+
       '</div></section>';
-    var needs = '<section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Нужно решение</h2>'+(q.length?'<span class="chip red">'+q.length+'</span>':'')+'</div>'+
+    var pdd = o.pd_due||[], nNeed = q.length + pdd.length;
+    var pdRows = pdd.map(function(r){ var left = daysTo(r.due_on);
+      return '<a class="row" href="#security/pd/'+r.id+'"><div style="flex:1;min-width:0"><div style="font-weight:600">ПДн: '+esc(PDK[r.kind]||r.kind)+'</div><div class="d">'+esc(dueText(r.due_on, left))+'</div></div><span class="btn sm">Ответить</span></a>'; }).join('');
+    var needs = '<section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Нужно решение</h2>'+(nNeed?'<span class="chip red">'+nNeed+'</span>':'')+'</div>'+
+      (pdd.length ? '<div class="rows">'+pdRows+'</div>' : '')+
       (q.length ? '<div class="rows">'+q.slice(0,4).map(function(g){
         var it = g.items||[], last = it[0]||{};
         var title = g.any_hidden ? 'Скрыто после жалоб' : (g.max_authors>=2 ? g.max_authors+'-я жалоба «'+(REASON[last.reason]||'').toLowerCase()+'»' : 'Жалоба «'+(REASON[last.reason]||'').toLowerCase()+'»');
         return '<a class="row" href="#complaints/'+g.id+'"><div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(title)+'</div><div class="d">'+esc((g.spheres||'Без направлений')+' · '+g.name)+'</div></div><span class="btn sm">Разобрать</span></a>'; }).join('')+'</div>'
-        : '<div class="d">Жалоб без решения нет. Отзывы публикуются сами.</div>')+'</section>';
+        : pdd.length ? '' : '<div class="d">Жалоб без решения нет. Отзывы публикуются сами.</div>')+'</section>';
     var mt = o.misses_top||[];
     var misses = '<section class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 class="h2">Ищут, но не находят</h2><span class="d">'+per+'</span></div>'+
       (mt.length ? '<div class="rows">'+mt.map(function(m){ return '<div class="row"><span style="flex:1;min-width:0;overflow-wrap:anywhere">'+esc(m.query)+'</span><b>'+m.hits+'</b></div>'; }).join('')+'</div><span class="d">Каких мастеров позвать в первую очередь</span>'
         : '<div class="d">Пока всё находится — или поисков ещё не было. Считаем с 14 октября 2026.</div>')+'</section>';
     var s = o.system||{};
     var sys = '<section class="card"><h2 class="h2">Система</h2><div class="rows">'+
-      '<div class="row"><span style="flex:1">Звонки с кодом сегодня</span><b>'+num(s.code_calls_today)+'</b></div>'+
+      '<a class="row" href="#security"><span style="flex:1">Звонки с кодом сегодня</span>'+(s.guard_alert?'<span class="chip red">похоже на ботов</span> ':'')+'<b>'+num(s.code_calls_today)+'</b></a>'+
       '<div class="row"><span style="flex:1">Очередь push</span>'+(s.push_queue?'<span class="chip yel">'+s.push_queue+'</span>':'<span class="chip grn">пусто</span>')+'</div>'+
       '<div class="row"><span style="flex:1">Ошибки push за сутки</span>'+(s.push_failed?'<span class="chip red">'+s.push_failed+'</span>':'<span class="chip grn">нет</span>')+'</div>'+
-      '<div class="row"><span style="flex:1">Аккаунты на удаление</span>'+(s.deletions?'<span class="chip gry">'+s.deletions+'</span>':'<span class="chip grn">нет</span>')+'</div>'+
+      '<a class="row" href="#security"><span style="flex:1">Аккаунты на удаление</span>'+(s.deletions?'<span class="chip gry">'+s.deletions+'</span>':'<span class="chip grn">нет</span>')+'</a>'+
+      '<a class="row" href="#security/pd"><span style="flex:1">Запросы по ПДн</span>'+(s.pd_open?'<span class="chip '+(pdd.length?'red':'yel')+'">'+s.pd_open+'</span>':'<span class="chip grn">нет</span>')+'</a>'+
       (s.free_pro_until ? '<a class="row" href="#settings"><span style="flex:1">Бесплатный Про</span><span class="chip gry">до '+dm(s.free_pro_until)+' '+new Date(s.free_pro_until).getFullYear()+'</span></a>' : '')+
       '</div></section>';
     var main = $('main'), keep = main.querySelector('.ptop').outerHTML + main.querySelector('.dhead').outerHTML + $('perB').outerHTML;
@@ -1130,6 +1165,229 @@ function extendFreePro(until){
     });
 }
 
+/* ---------- Защита и журналы ---------- */
+var PDK = { access:'Сведения о данных', correct:'Исправить данные', delete:'Удалить данные', withdraw:'Отзыв согласия', stop:'Прекратить показ данных', rkn:'Запрос Роскомнадзора', other:'Другое' };
+var PDH = {
+  access:'Сообщить, какие данные о человеке есть, зачем, кому передаются и сколько хранятся (ст. 14 152-ФЗ). Срок — 10 рабочих дней, можно продлить на 5, если отправить заявителю объяснение причины.',
+  correct:'Исправить неточные данные и сообщить заявителю. Срок — 7 рабочих дней с получения подтверждающих сведений.',
+  delete:'Уничтожить данные, если они не нужны для цели или получены незаконно, и сообщить заявителю. Срок — 7 рабочих дней. Свой аккаунт человек может удалить и сам: Настройки → Удалить аккаунт.',
+  withdraw:'Прекратить обработку и уничтожить данные. Срок — 30 дней. Для пользователя это удаление аккаунта (сам — в настройках приложения, или по его просьбе).',
+  stop:'Прекратить показ имени, номера и города в объявлениях — скрыть профиль мастера. Срок — 3 рабочих дня.',
+  rkn:'Ответить Роскомнадзору. Срок — 10 рабочих дней, можно продлить на 5 с объяснением причины.',
+  other:'Ответить заявителю. Срок — 10 рабочих дней.' };
+var PDC = { email:'Почта', letter:'Письмо', app:'Через приложение', phone:'Звонок', other:'Другое' };
+var LR = { sent:['код не введён','yel'], ok:['вошёл','grn'], wrong:['неверный код','yel'], zvonok_error:['Zvonok не позвонил','red'],
+  pow:['задачка не решена','red'], replay:['повтор задачки','red'], ip_limit:['лимит сети','gry'], device_limit:['лимит устройства','gry'],
+  phone_limit:['лимит номера','gry'], busy:['лимит сервиса','red'], not_admin:['не администратор','red'] };
+var ACT = { unlock:'Вошёл в управление', unlock_failed:'Неверный пароль управления', unlock_locked:'5 неверных паролей — пауза 15 минут',
+  password_set:'Задал пароль управления', grant:'Назначен администратором', revoke:'Снят с управления',
+  hide_profile:'Скрыл профиль', show_profile:'Вернул профиль', block:'Заблокировал мастера', unblock:'Разблокировал мастера',
+  hide_sphere:'Скрыл направление «{t}»', show_sphere:'Вернул направление «{t}»',
+  complaints_restore:'Отклонил жалобы, всё возвращено', complaints_uphold:'Принял жалобы, скрыто', complaints_dismiss:'Отклонил жалобы',
+  complaint_rejected:'Отклонил одну жалобу', review_hide:'Скрыл отзыв', review_show:'Вернул отзыв', phone_view:'Посмотрел номер',
+  category_create:'Добавил сферу «{n}»', category_update:'Изменил сферу «{n}»', city_create:'Добавил город «{n}»', city_update:'Изменил город «{n}»',
+  free_pro_set:'Продлил бесплатный Про', pd_create:'Записал запрос по ПДн', pd_update:'Изменил запрос по ПДн',
+  pd_extend:'Продлил срок запроса по ПДн', pd_close:'Выполнил запрос по ПДн' };
+var FLD = { name:'название', name_plural:'мн. число', short_name:'коротко', grp:'группа', sort:'порядок', on_home:'на главной', is_active:'показывать',
+  keywords:'слова', hint_service:'пример услуги', hint_unit:'единица', hint_query:'пример запроса', region:'регион', tz:'часовой пояс' };
+var JT = [['logins','Вход по звонку','Вход'],['actions','Действия админов','Админы'],['phones','Просмотры номеров','Номера']];
+function ymd(s){ var p=String(s).slice(0,10).split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2])); }
+function dmd(s){ var d=ymd(s); return d.getDate()+' '+MS[d.getMonth()]; }
+function daysTo(s){ var t=new Date(); t=new Date(t.getFullYear(), t.getMonth(), t.getDate()); return Math.round((ymd(s)-t)/864e5); }
+function dueText(due, left){ return left<0 ? 'срок прошёл '+dmd(due) : left===0 ? 'срок сегодня' : 'до '+dmd(due)+' · '+left+' '+plural(left,'день','дня','дней'); }
+function dueChip(r){ if(r.done_at) return '<span class="chip grn">выполнен</span>';
+  var l = r.days_left!=null ? r.days_left : daysTo(r.due_on);
+  return '<span class="chip '+(l<=0?'red':l<=2?'yel':'gry')+'">'+(l<0?'просрочен':l===0?'сегодня':'до '+dmd(r.due_on))+'</span>'; }
+function pdWho(r){ return r.name ? 'Мастер '+r.name : r.phone ? (r.phone) : r.contact ? r.contact : 'заявитель не указан'; }
+function when(iso){ var d=new Date(iso), t=new Date(); return (d.toDateString()===t.toDateString() ? '' : dm(iso)+' ')+hm(iso); }
+function actText(x){
+  var d = x.details||{}, t = (ACT[x.action]||x.action).replace('{t}', d.title||'').replace('{n}', d.name||'');
+  if(x.action==='free_pro_set' && d.new) t += ' до '+dmy(d.new);
+  if(x.action==='review_hide' && d.reason) t += ' — '+(d.reason==='insult'?'оскорбление':'спам');
+  if(/^pd_/.test(x.action) && d.kind) t += ': '+(PDK[d.kind]||d.kind)+(d.due_on && x.action!=='pd_close' ? ', срок '+dmd(d.due_on) : '')+(d.late?' (позже срока)':'');
+  if(d.complaints) t += ' · '+d.complaints+' '+plural(d.complaints,'жалоба','жалобы','жалоб');
+  var ch = d.changes ? Object.keys(d.changes).map(function(k){ var v=d.changes[k]; var f=function(z){ return z===true?'да':z===false?'нет':z==null||z===''?'—':String(z); };
+    return (FLD[k]||k)+': '+f(v[0])+' → '+f(v[1]); }).join('; ') : '';
+  return { text:t, more:ch };
+}
+function pageSecurity(){
+  A.jtab = A.jtab || 'logins';
+  shell('security', ptop('Защита', '#more')+
+    '<div class="dhead"><h1 class="h1">Защита и журналы</h1><div class="sub">Вход по звонку, боты, запросы по персональным данным и действия администраторов</div></div>'+
+    '<div id="xbody"><div class="tiles">'+[1,2,3,4].map(function(){return '<div class="skel" style="height:112px"></div>';}).join('')+'</div></div>');
+  var v = location.hash;
+  Promise.all([rpc('admin_security'), rpc('admin_pd_list',{p_tab:'open'}),
+               callVerify({action:'admin_config'}).catch(function(){ return null; })]).then(function(r){
+    if(location.hash!==v) return;
+    var o=r[0]||{}, pd=r[1]||[], cfg=r[2], t=o.today||{}, al=o.alert||{}, dl=o.delivery||{}, dels=o.deletions||[];
+    var tiles = '<div class="tiles">'+
+      '<div class="tile"><span class="k">Звонки с кодом · сегодня</span><span class="v">'+num(t.calls)+'</span><span class="d">'+num(t.ok)+' '+plural(t.ok,'вошёл','вошли','вошли')+' · лимит 200 в час</span></div>'+
+      '<div class="tile"><span class="k">Отказы задачки</span><span class="v">'+num(t.bots)+'</span><span class="d">'+(t.bots?'похоже на ботов':'ботов не видно')+'</span></div>'+
+      '<div class="tile t34"><span class="k">Новые гости</span><span class="v">'+num(t.guests)+'</span><span class="d">лимит 20 в час с одной сети</span></div>'+
+      '<div class="tile t34"><span class="k">Упёрлись в лимит</span><span class="v">'+num(t.limits)+'</span><span class="d">'+(t.not_admin ? num(t.not_admin)+' '+plural(t.not_admin,'попытка','попытки','попыток')+' войти в управление с чужого номера' : 'звонков: номер, устройство, сеть')+'</span></div></div>';
+    var alert = al.on ? '<div class="alert">Сегодня '+num(al.today)+' '+plural(al.today,'отказ','отказа','отказов')+' защиты — обычно около '+String(al.avg).replace('.',',')+' в день. Похоже, приложение перебирают боты. Если так и дальше — скажите Claude включить Яндекс SmartCaptcha.</div>' : '';
+    // Zvonok
+    var on = function(b, yes, no){ return b ? '<span class="chip grn">'+yes+'</span>' : '<span class="chip red">'+no+'</span>'; };
+    var dRate = dl.sent ? Math.round(dl.ok/dl.sent*100) : null;
+    var zv = '<section class="card" aria-label="Zvonok"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Zvonok</h2>'+
+      (cfg ? on(cfg.flash, 'подключён', 'ключи не введены') : '<span class="chip gry">нет данных</span>')+'</div><div class="rows">'+
+      (cfg ? '<div class="row"><span style="flex:1">Звонок-сброс</span>'+on(cfg.flash,'есть','нет')+'</div>'+
+             '<div class="row"><span style="flex:1">«Позвоните нам»</span>'+on(cfg.callback,'есть','нет')+'</div>'+
+             '<div class="row"><span style="flex:1">Тестовые номера</span>'+(cfg.test_logins?'<span class="chip yel">включены</span>':'<span class="chip grn">выключены</span>')+'</div>' : '')+
+      '<div class="row"><span style="flex:1">Входят после звонка · 7 дней</span>'+(dl.sent ? '<b'+(dl.sent>=5 && dRate<50?' class="warn"':'')+'>'+num(dl.ok)+' из '+num(dl.sent)+'</b>' : '<span class="d">звонков не было</span>')+'</div>'+
+      '<div class="row"><span style="flex:1">Баланс</span><a href="https://zvonok.com/manager/" target="_blank" rel="noopener noreferrer" style="font-weight:600">в кабинете Zvonok ›</a></div></div>'+
+      '<span class="d">'+(cfg && !cfg.flash ? 'Пока ключей нет, входят только тестовые номера. ' : '')+(cfg && cfg.test_logins ? 'Тестовые номера выключить перед запуском. ' : '')+
+        (dl.sent>=5 && dRate<50 ? 'Меньше половины звонков заканчиваются входом — возможно, оператор режет звонок-сброс. ' : '')+'Ключи вводятся на сервере командой ub-secret, не здесь.</span></section>';
+    // ПДн
+    var pdc = '<section class="card" aria-label="Запросы по персональным данным"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Запросы по персональным данным</h2>'+(pd.length?'<span class="chip '+(pd.some(function(x){return x.days_left<=2;})?'red':'yel')+'">'+pd.length+'</span>':'')+'</div><div class="rows">'+
+      pd.slice(0,4).map(function(x){ return '<a class="row" href="#security/pd/'+x.id+'"><div style="flex:1;min-width:0"><div class="pdk">'+esc(PDK[x.kind])+'</div><div class="d">'+esc(pdWho(x))+' · получено '+dmd(x.received_on)+'</div></div>'+dueChip(x)+'</a>'; }).join('')+
+      (pd.length>4 ? '<a class="row" href="#security/pd"><span style="flex:1">Ещё '+(pd.length-4)+'</span><span class="d">›</span></a>' : '')+
+      (!pd.length ? '<div class="row"><span class="d" style="flex:1">Открытых запросов нет</span></div>' : '')+
+      '<button type="button" class="row" id="dels" style="background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;cursor:pointer;font:inherit"><div style="flex:1;min-width:0"><div class="pdk">Удаление аккаунтов</div><div class="d">'+(dels.length ? dels.length+' '+plural(dels.length,'заявка','заявки','заявок')+' · удалятся сами через 7 дней' : 'заявок нет · удаляются сами через 7 дней')+'</div></div><span class="chip grn">авто</span></button>'+
+      '</div><div class="acts">'+(isOwner()?'<button type="button" class="btn sm" id="pd_new">+ Запрос</button>':'')+'<a class="btn sm" href="#security/pd">Все запросы'+(o.pd_done?' · '+o.pd_done+' выполнено':'')+' ›</a></div>'+
+      '<span class="d">Пришло письмо или обращение о данных — запишите сюда: срок посчитается сам, а за 2 дня до него запрос появится в «Нужно решение».</span></section>';
+    // график
+    var ch=o.chart||[], mx=1; ch.forEach(function(x){ mx=Math.max(mx, x.calls, x.refused); });
+    var chart = '<section class="card" aria-label="Вход по звонку за 30 дней"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px"><h2 class="h2">Вход по звонку · 30 дней</h2>'+
+      '<div class="legend d"><span><i style="background:var(--fg)"></i>Звонки с кодом</span><span><i style="background:var(--dgt)"></i>Отказы защиты</span></div></div>'+
+      '<div class="chart many" role="img" aria-label="'+esc(ch.map(function(x){ return dm(x.day)+': звонков '+x.calls+', вошли '+x.ok+', отказов '+x.refused; }).join('; '))+'">'+
+      ch.map(function(x,i){ return '<div class="bar" title="'+esc(dm(x.day)+' · звонков '+x.calls+' · вошли '+x.ok+' · отказов '+x.refused)+'"><div><i style="height:'+Math.round(x.calls/mx*100)+'%"></i><i class="r" style="height:'+Math.round(x.refused/mx*100)+'%"></i></div><span>'+(i%5===(ch.length-1)%5 ? ymd(x.day).getDate() : '')+'</span></div>'; }).join('')+
+      '</div></section>';
+    var seg = function(ph){ return '<div class="seg'+(ph?' ponly':' dhead')+'" role="group" aria-label="Журнал"'+(ph?' style="display:flex"':'')+'>'+JT.map(function(j){ return '<button type="button" data-jt="'+j[0]+'" class="'+(A.jtab===j[0]?'on':'')+'" aria-pressed="'+(A.jtab===j[0])+'">'+(ph?j[2]:j[1])+'</button>'; }).join('')+'</div>'; };
+    var jour = '<section style="display:flex;flex-direction:column;gap:12px" aria-label="Журнал"><div class="jhead"><h2 class="h2">Журнал</h2>'+seg(false)+'</div>'+seg(true)+
+      '<div id="jbody"><div class="skel" style="height:220px"></div></div>'+
+      '<span class="d">IP-адреса не показываются и хранятся только хешем. Журналы чистятся сами: вход по звонку — 30 дней, сводка защиты — 400 дней, действия управления — 1 год.</span></section>';
+    $('xbody').innerHTML = alert + tiles + '<div class="cards2">'+zv+pdc+'</div>' + chart + jour;
+    document.querySelectorAll('[data-jt]').forEach(function(b){ b.onclick = function(){ A.jtab = b.getAttribute('data-jt');
+      document.querySelectorAll('[data-jt]').forEach(function(x){ var on = x.getAttribute('data-jt')===A.jtab; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+      loadJournal(true); }; });
+    $('dels').onclick = function(){ showDeletions(dels); };
+    var nb = $('pd_new'); if(nb) nb.onclick = function(){ pdForm(null); };
+    loadJournal(true);
+  }).catch(function(err){ $('xbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+function showDeletions(dels){
+  sheet('<h2>Удаление аккаунтов</h2><p>Аккаунт скрывается сразу, а через 7 дней удаляется сам. Отзывы остаются с подписью «Удалённый пользователь».</p>'+
+    (dels.length ? '<div class="rows">'+dels.map(function(d){ return '<div class="row"><div style="flex:1;min-width:0"><div style="font-weight:600">'+(d.name?esc(d.name):'Заказчик')+'</div><div class="d">'+esc(d.phone||'')+' · заявка '+dm(d.requested_at)+'</div></div><span class="chip gry">удалится '+dm(d.delete_at)+'</span></div>'; }).join('')+'</div>'
+      : '<p>Заявок нет.</p>')+'<button type="button" class="btn big" data-close>Закрыть</button>');
+}
+function loadJournal(reset){
+  var tab = A.jtab, v = location.hash;
+  if(reset){ A.jrows = []; A.jmore = false; }
+  var before = !reset && A.jrows.length ? A.jrows[A.jrows.length-1].id : null;
+  return rpc('admin_journal', {p_tab:tab, p_before:before, p_limit:50}).then(function(d){
+    if(location.hash!==v || A.jtab!==tab || !$('jbody')) return;
+    A.jrows = A.jrows.concat(d.rows||[]); A.jmore = !!d.more;
+    var rows = A.jrows, html;
+    if(!rows.length){ html = '<div class="empty">'+(tab==='logins'?'Звонков с кодом за 30 дней не было.':tab==='phones'?'Номера мастеров администраторы не открывали.':'Действий пока не было.')+'</div>'; }
+    else if(tab==='logins'){
+      html = '<div class="tblw j"><table><thead><tr><th>Время</th><th>Номер</th><th>Способ</th><th>Результат</th><th>Устройство</th></tr></thead><tbody>'+
+        rows.map(function(x){ var l = LR[x.result]||[x.result,'gry'];
+          return '<tr><td>'+when(x.at)+'</td><td>'+esc(x.phone||'—')+(x.is_test?' <span class="chip gry">тест</span>':'')+(x.for_admin?' <span class="chip gry">управление</span>':'')+'</td><td>'+(x.method==='callback'?'Позвонить нам':'Звонок-сброс')+'</td><td><span class="chip '+l[1]+'">'+l[0]+'</span></td><td>'+esc(x.device||'—')+'</td></tr>'; }).join('')+'</tbody></table></div>'+
+        '<div class="jl">'+rows.map(function(x){ var l = LR[x.result]||[x.result,'gry'], ph = String(x.phone||'').replace(/^.*(\d\d)$/,'··$1');
+          return '<div class="it"><span class="d tm">'+when(x.at)+'</span><span style="flex:1;min-width:0">'+esc(ph||'—')+' · '+(x.method==='callback'?'позвонил':'сброс')+(x.for_admin?' · упр.':'')+(x.is_test?' · тест':'')+'</span><span class="chip '+l[1]+'">'+l[0]+'</span></div>'; }).join('')+'</div>';
+    } else {
+      html = '<div class="tblw j"><table><thead><tr><th>Время</th><th>Кто</th><th>Что</th>'+(tab==='phones'?'<th>Мастер</th>':'<th>Мастер или подробности</th>')+'</tr></thead><tbody>'+
+        rows.map(function(x){ var a = actText(x);
+          return '<tr><td>'+when(x.at)+'</td><td>'+esc(x.admin||'—')+'</td><td class="wrap">'+esc(a.text)+'</td><td class="wrap">'+(x.profile_id?'<a href="#masters/'+x.profile_id+'" style="font-weight:600">'+esc(x.name||'мастер')+'</a>':'')+(a.more?'<div class="d">'+esc(a.more)+'</div>':'')+'</td></tr>'; }).join('')+'</tbody></table></div>'+
+        '<div class="jl">'+rows.map(function(x){ var a = actText(x);
+          return '<div class="it" style="align-items:flex-start;padding:10px 0"><span class="d tm">'+when(x.at)+'</span><div style="flex:1;min-width:0"><div>'+esc(a.text)+'</div><div class="d">'+esc(x.admin||'')+(x.profile_id?' · <a href="#masters/'+x.profile_id+'">'+esc(x.name||'мастер')+'</a>':'')+(a.more?' · '+esc(a.more):'')+'</div></div></div>'; }).join('')+'</div>';
+    }
+    if(A.jmore) html += '<button type="button" class="btn" id="jmore" style="align-self:flex-start;margin-top:12px">Показать ещё</button>';
+    $('jbody').innerHTML = html;
+    var m = $('jmore'); if(m) m.onclick = function(){ m.disabled = true; loadJournal(false); };
+  }).catch(function(err){ if($('jbody')) $('jbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+
+/* Реестр запросов по ПДн: список слева, запрос справа (на телефоне — отдельным экраном) */
+function pagePd(id){
+  A.pdtab = A.pdtab || 'open';
+  var detail = !!id;
+  var seg = '<div class="seg" role="group" aria-label="Запросы">'+[['open','Открытые'],['done','Выполненные']].map(function(t){ return '<button type="button" data-pt="'+t[0]+'" class="'+(A.pdtab===t[0]?'on':'')+'" aria-pressed="'+(A.pdtab===t[0])+'">'+t[1]+'</button>'; }).join('')+'</div>';
+  shell('security', (detail ? '' : ptop('Запросы по ПДн', '#security'))+
+    '<div class="dhead" style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px"><div><a href="#security" class="d" style="text-decoration:none">‹ Защита и журналы</a><h1 class="h1">Запросы по персональным данным</h1><div class="sub">Сроки — по 152-ФЗ, в рабочих днях без учёта праздников (выходит раньше, не позже)</div></div>'+seg+'</div>'+
+    (detail ? '' : '<div class="ponly">'+seg.replace('class="seg"','class="seg" style="display:flex"')+'</div>')+
+    '<div id="pbody"><div class="skel" style="height:320px"></div></div>');
+  document.querySelectorAll('[data-pt]').forEach(function(b){ b.onclick = function(){ A.pdtab = b.getAttribute('data-pt'); if(location.hash==='#security/pd') pagePd(null); else location.hash='#security/pd'; }; });
+  var v = location.hash;
+  rpc('admin_pd_list', {p_tab: detail ? 'all' : A.pdtab}).then(function(all){
+    if(location.hash!==v) return;
+    var list = detail ? all.filter(function(x){ return A.pdtab==='done' ? !!x.done_at : !x.done_at; }) : all;
+    var cur = id ? all.filter(function(x){ return String(x.id)===String(id); })[0] : null;
+    if(!cur && !id && window.matchMedia('(min-width:900px)').matches && list.length) cur = list[0];
+    var nav = '<nav class="dlist" aria-label="Запросы">'+(isOwner()?'<button type="button" class="btn" id="pd_new" style="align-self:flex-start;margin:0 0 10px">+ Запрос</button>':'')+
+      (list.length ? list.map(function(x){ var on = cur && cur.id===x.id;
+        return '<a class="di'+(on?' on':'')+'" href="#security/pd/'+x.id+'"'+(on?' aria-current="true"':'')+'><span style="min-width:0;display:flex;flex-direction:column"><span>'+esc(PDK[x.kind])+'</span><span class="d" style="font-weight:400">'+esc(pdWho(x))+' · '+dmd(x.received_on)+'</span></span><span class="tail">'+dueChip(x)+'</span></a>'; }).join('')
+        : '<div class="empty">'+(A.pdtab==='done'?'Выполненных запросов пока нет.':'Открытых запросов нет.')+'</div>')+'</nav>';
+    var ed = cur ? pdCard(cur) : (id ? '<section class="ed"><div class="empty">Запрос не найден</div></section>' : '');
+    $('pbody').innerHTML = '<div class="split '+(detail?'detail':'list')+'">'+nav+ed+'</div>';
+    var nb = $('pd_new'); if(nb) nb.onclick = function(){ pdForm(null); };
+    if(cur) bindPdCard(cur);
+  }).catch(function(err){ $('pbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+function pdCard(r){
+  var canExt = !r.done_at && !r.extended_at && ['access','rkn','other'].indexOf(r.kind)>=0 && r.days_left>=0;
+  return '<section class="ed" aria-label="Запрос">'+
+    '<div class="ptop"><a class="back" href="#security/pd" aria-label="Назад к запросам">‹</a><b class="ttl">'+esc(PDK[r.kind])+'</b><span class="logo" role="img" aria-label="Знак Уустары бул"></span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 class="dhead" style="margin:0;font-size:24px;font-weight:700">'+esc(PDK[r.kind])+'</h2>'+dueChip(r)+'</div>'+
+    (r.done_at ? '' : (r.days_left<0 ? '<div class="alert">Срок прошёл '+dmd(r.due_on)+'. Ответьте как можно скорее и отметьте здесь.</div>' : r.days_left<=2 ? '<div class="note">'+esc(dueText(r.due_on, r.days_left))+'.</div>' : ''))+
+    '<div class="rows">'+
+      '<div class="row"><span style="flex:1" class="d">Заявитель</span><span style="text-align:right">'+(r.profile_id?'<a href="#masters/'+r.profile_id+'" style="font-weight:600">'+esc(r.name)+'</a> · ':'')+esc(r.phone||'')+(r.phone&&r.contact?'<br>':'')+esc(r.contact||'')+(!r.phone&&!r.contact&&!r.name?'—':'')+'</span></div>'+
+      '<div class="row"><span style="flex:1" class="d">Получено</span><span>'+esc(dmd(r.received_on))+' · '+esc(PDC[r.channel]||r.channel)+'</span></div>'+
+      '<div class="row"><span style="flex:1" class="d">Срок ответа</span><span>'+esc(dmd(r.due_on))+(r.extended_at?' · продлён':'')+'</span></div>'+
+      (r.done_at ? '<div class="row"><span style="flex:1" class="d">Выполнено</span><span>'+esc(dmy(r.done_at))+'</span></div>' : '')+
+    '</div>'+
+    (r.summary ? '<div class="cmp"><span class="lbl">Что просят</span><div style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45">'+esc(r.summary)+'</div></div>' : '')+
+    (r.done_note ? '<div class="cmp"><span class="lbl">Что сделано</span><div style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45">'+esc(r.done_note)+'</div></div>' : '')+
+    '<div class="d" style="line-height:1.5">'+esc(PDH[r.kind]||'')+'</div>'+
+    (!r.done_at && isOwner() ? '<div class="acts"><button type="button" class="btn pr" id="pd_close">Отметить выполненным</button>'+
+      (r.kind==='stop' && r.profile_id ? '<a class="btn" href="#masters/'+r.profile_id+'">Открыть мастера</a>' : '')+
+      (canExt ? '<button type="button" class="btn" id="pd_ext">Продлить на 5 рабочих дней</button>' : '')+
+      '<button type="button" class="btn" id="pd_edit">Изменить</button></div>' : '')+
+    (!r.done_at && !isOwner() ? '<div class="note">Отмечать запросы может только владелец.</div>' : '')+
+    '</section>';
+}
+function bindPdCard(r){
+  var c=$('pd_close'), e=$('pd_ext'), ed=$('pd_edit');
+  if(ed) ed.onclick = function(){ pdForm(r); };
+  if(e) e.onclick = function(){ confirmBox('Продлить срок на 5 рабочих дней?', 'Можно один раз и только если отправить заявителю объяснение, почему нужно больше времени (ст. 20 152-ФЗ). Отправили?', 'Да, продлить', false, function(){
+    rpc('admin_pd_extend', {p_id:r.id}).then(function(x){ toast('Новый срок — '+dmd(x.due_on)); loadBadges(); pagePd(String(r.id)); }, function(err){ toast(err.message); }); }); };
+  if(c) c.onclick = function(){
+    sheet('<h2>Запрос выполнен</h2><p>Коротко: что ответили или сделали и как отправили. Запись хранится год после ответа, как обещано в Политике.</p>'+
+      '<label class="fl"><span>Что сделано</span><textarea class="in" id="pd_note" maxlength="1000" placeholder="Например: 15 окт отправил письмом перечень данных и сроки хранения"></textarea></label>'+
+      '<button type="button" class="btn big pr" id="pd_ok">Отметить выполненным</button><button type="button" class="btn big" data-close>Отмена</button>',
+      function(){ $('pd_note').focus(); $('pd_ok').onclick = function(){ var b=$('pd_ok'); b.disabled=true;
+        rpc('admin_pd_close', {p_id:r.id, p_note:$('pd_note').value}).then(function(){ closeSheet(); toast('Отмечено'); loadBadges(); pagePd(String(r.id)); }, function(err){ b.disabled=false; toast(err.message); }); }; });
+  };
+}
+function pdForm(r){
+  var isNew = !r, today = isoDate(new Date());
+  r = r || { kind:'', received_on: today, channel:'email', contact:'', summary:'' };
+  sheet('<h2>'+(isNew?'Новый запрос по ПДн':'Изменить запрос')+'</h2>'+
+    '<form id="pdf" style="display:flex;flex-direction:column;gap:12px" autocomplete="off">'+
+    '<label class="fl"><span>Что просят</span><select class="in" id="pf_kind">'+(isNew?'<option value="">Выберите</option>':'')+Object.keys(PDK).map(function(k){ return '<option value="'+k+'"'+(k===r.kind?' selected':'')+'>'+esc(PDK[k])+'</option>'; }).join('')+'</select></label>'+
+    '<p id="pf_hint" class="d" style="font-size:13px;min-height:18px">'+esc(PDH[r.kind]||'')+'</p>'+
+    '<div class="g3"><label class="fl"><span>Получено</span><input class="in" id="pf_date" type="date" max="'+today+'" value="'+esc(String(r.received_on).slice(0,10))+'"></label>'+
+    '<label class="fl"><span>Откуда</span><select class="in" id="pf_ch">'+Object.keys(PDC).map(function(k){ return '<option value="'+k+'"'+(k===r.channel?' selected':'')+'>'+esc(PDC[k])+'</option>'; }).join('')+'</select></label></div>'+
+    '<label class="fl"><span>Номер в приложении <small>— если есть: найдём аккаунт, сам номер не сохраняется</small></span><input class="in" id="pf_phone" type="tel" inputmode="tel" placeholder="'+(isNew?'+7 ___ ___-__-__':'не менять')+'"></label>'+
+    '<label class="fl"><span>Как ответить <small>— почта или адрес</small></span><input class="in" id="pf_contact" maxlength="200" value="'+esc(r.contact||'')+'"></label>'+
+    '<label class="fl"><span>Суть запроса</span><textarea class="in" id="pf_sum" maxlength="1000">'+esc(r.summary||'')+'</textarea></label>'+
+    '<button type="submit" class="btn big pr" id="pf_ok">'+(isNew?'Записать':'Сохранить')+'</button><button type="button" class="btn big" data-close>Отмена</button></form>',
+    function(){
+      var k=$('pf_kind'); k.onchange = function(){ $('pf_hint').textContent = PDH[k.value]||''; };
+      var ph=$('pf_phone'); ph.addEventListener('input', function(){ fmtPhoneInput(ph); });
+      $('pdf').addEventListener('submit', function(e){
+        e.preventDefault(); var b=$('pf_ok'); b.disabled=true;
+        rpc('admin_pd_save', {p_id: isNew?null:r.id, p:{ kind:k.value, received_on:$('pf_date').value, channel:$('pf_ch').value,
+            phone:ph.value, contact:$('pf_contact').value, summary:$('pf_sum').value }}).then(function(x){
+          closeSheet(); toast((isNew?'Записано':'Сохранено')+' · срок '+dmd(x.due_on)+(ph.value && !x.user_found ? ' · аккаунт с этим номером не найден' : ''));
+          loadBadges(); A.pdtab='open';
+          if(location.hash==='#security/pd/'+x.id) pagePd(String(x.id)); else location.hash = '#security/pd/'+x.id;
+        }, function(err){ b.disabled=false; toast(err.message); });
+      });
+    });
+}
+
 /* ---------- Ещё (телефон) ---------- */
 function pageMore(){
   if(window.matchMedia('(min-width:900px)').matches){ location.hash='#overview'; return; }
@@ -1138,6 +1396,7 @@ function pageMore(){
     '<div class="grp"><a class="it" href="#reviews" style="min-height:48px">'+ic('compl')+'<span style="flex:1">Новые отзывы</span><span class="d"><span id="rvn">'+(A.badges.reviews_new||0)+'</span> ›</span></a>'+
     '<a class="it" href="#dirs" style="min-height:48px">'+ic('dir')+'<span style="flex:1">Справочники</span><span class="d">›</span></a>'+
     '<a class="it" href="#settings" style="min-height:48px">'+ic('set')+'<span style="flex:1">Настройки</span><span class="d">›</span></a>'+
+    '<a class="it" href="#security" data-pdu style="min-height:48px">'+ic('shield')+'<span style="flex:1">Защита и журналы</span><span class="d" style="margin-left:8px">›</span></a>'+
     LATER.map(function(n){ return '<div class="it" style="min-height:48px;color:var(--mu)">'+ic(n[1])+'<span style="flex:1">'+n[0]+'</span><span class="chip gry">'+n[2]+'</span></div>'; }).join('')+'</div>'+
     '<span class="lbl">Оформление</span>'+themeSeg('')+
     '<div class="grp"><a class="it" href="../" target="_blank" rel="noopener" style="min-height:48px"><span style="flex:1">Открыть приложение</span><span class="d">›</span></a>'+

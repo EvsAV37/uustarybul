@@ -10,7 +10,12 @@
 //   DISABLE_TEST_LOGINS=1    — выключить тестовые номера (обязательно перед запуском)
 //
 // Действия: start, confirm, start_fallback, check_fallback;
-// challenge (задачка для телефона), guest (проверка гостя перед первым номером мастера).
+// challenge (задачка для телефона), guest (проверка гостя перед первым номером мастера);
+// admin_config — для страницы управления: настроены ли кампании Zvonok и включены ли тестовые номера.
+//
+// Журнал (14.10.2026, миграция 020): каждая попытка получить код и каждый отказ защиты пишутся
+// в login_log (номер, способ, итог, устройство — «iPhone · Safari», без IP) и в сводку guard_stats по дням.
+// Ошибка записи в журнал вход не ломает.
 //
 // Защита от ботов (13.10.2026): «задачка для телефона» (proof-of-work в формате ALTCHA:
 // найти number, при котором sha256(salt + number) = challenge) нужна для start, start_fallback
@@ -70,6 +75,25 @@ function json(body: unknown, status = 200) {
 }
 function fail(error: string, status = 400) { return json({ ok: false, error }, status); }
 
+// Устройство коротко, для журнала: «Android · Chrome». Сама строка браузера не хранится.
+function deviceOf(ua: string): string {
+  const os = /iPhone|iPad|iPod/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows'
+    : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+  const br = /YaBrowser|YaApp/.test(ua) ? 'Яндекс' : /Edg[A\/]/.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera'
+    : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /SamsungBrowser/.test(ua) ? 'Samsung' : /CriOS|Chrome\//.test(ua) ? 'Chrome'
+    : /Safari/.test(ua) ? 'Safari' : '';
+  return [os, br].filter(Boolean).join(' · ') || 'неизвестно';
+}
+// Отказ защиты → короткий код для журнала
+function refusalCode(msg: string): string {
+  if (msg === 'pow_failed') return 'pow';
+  if (msg === 'pow_replay') return 'replay';
+  if (/сети/.test(msg)) return 'ip_limit';
+  if (/10 минут/.test(msg)) return 'device_limit';
+  if (/сегодня/.test(msg)) return 'phone_limit';
+  return 'busy';
+}
+
 // К одному виду: 7XXXXXXXXXX (так телефон хранится в auth.users)
 function normalizePhone(raw: string): string | null {
   let d = String(raw || '').replace(/\D/g, '');
@@ -108,6 +132,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || '');
+    const device = deviceOf(req.headers.get('user-agent') || '');
+    const forAdmin = body.admin === true;
     const ipHash = (await sha256('uustarybul-ip:' + ip + ':' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))).slice(0, 32);
 
     // Задачка, лимит по IP; null — можно, иначе текст ошибки
@@ -119,12 +145,37 @@ Deno.serve(async (req) => {
       return (data as string) || null;
     }
 
+    // Журнал защиты; ошибки записи не мешают входу
+    async function note(kind: 'call' | 'guest', outcome: string, extra: Record<string, unknown> = {}) {
+      try { await admin.rpc('guard_note', { p_kind: kind, p_outcome: outcome, ...extra }); } catch (_) { /* журнал не обязателен */ }
+    }
+    async function noteResult(phone: string, result: 'ok' | 'wrong' | 'zvonok_error') {
+      try { await admin.rpc('guard_result', { p_session: sessionKey, p_phone: phone, p_result: result }); } catch (_) { /* то же */ }
+    }
+
+    const key = Deno.env.get('ZVONOK_PUBLIC_KEY') || '';
+    const flash = Deno.env.get('ZVONOK_CAMPAIGN_FLASH') || '';
+    const callback = Deno.env.get('ZVONOK_CAMPAIGN_CALLBACK') || '';
+    const testsOn = Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
+
     if (action === 'challenge') return json({ ok: true, ...(await newChallenge()) });
+
+    // Для управления: что настроено на сервере (без самих ключей). Только администратору с введённым паролем.
+    if (action === 'admin_config') {
+      if (!user || user.is_anonymous) return fail('admin_required', 403);
+      const uc = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        auth: { persistSession: false }, global: { headers: { Authorization: 'Bearer ' + token } }
+      });
+      const { data: st, error } = await uc.rpc('admin_state');
+      if (error || !st?.unlocked) return fail('admin_required', 403);
+      return json({ ok: true, flash: !!(key && flash), callback: !!(key && callback), test_logins: testsOn });
+    }
 
     if (action === 'guest') {
       if (!user?.is_anonymous) return fail('Проверка нужна только гостям');
       const g = await botGuard('guest');
-      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
+      if (g) { await note('guest', refusalCode(g)); return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429); }
+      await note('guest', 'ok');
       const { error } = await admin.rpc('guest_mark', { p_uid: user.id });
       if (error) throw new Error('guest mark failed: ' + error.message);
       return json({ ok: true });
@@ -132,24 +183,32 @@ Deno.serve(async (req) => {
 
     const phone = normalizePhone(body.phone);
     if (!phone) return fail('Введите номер полностью, 10 цифр после +7');
-    const isTest = !!TEST_LOGINS[phone] && Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
+    const isTest = !!TEST_LOGINS[phone] && testsOn;
+    const logExtra = (method: string) => ({ p_session: sessionKey, p_phone: phone, p_method: method,
+                                            p_admin: forAdmin, p_test: isTest, p_device: device });
 
-    // Вход в управление (/admin): звоним только на номера администраторов — аккаунт не заводится, баланс не тратится
-    if (body.admin === true) {
+    // Вход в управление (/admin): звоним только на номера администраторов — аккаунт не заводится, баланс не тратится.
+    // Для start / start_fallback проверка идёт после задачки: без её решения нельзя перебором узнать, чей номер админский.
+    async function adminDenied(method: string | null): Promise<boolean> {
+      if (!forAdmin) return false;
       const { data: isAdmin, error } = await admin.rpc('admin_phone_ok', { p_phone: phone });
       if (error) throw new Error('admin check failed: ' + error.message);
-      if (!isAdmin) return fail('Этот номер не подключён к управлению', 403);
+      if (isAdmin) return false;
+      if (method) await note('call', 'not_admin', logExtra(method));
+      return true;
     }
+    const notAdmin = () => fail('Этот номер не подключён к управлению', 403);
 
-    const key = Deno.env.get('ZVONOK_PUBLIC_KEY') || '';
-    const flash = Deno.env.get('ZVONOK_CAMPAIGN_FLASH') || '';
-    const callback = Deno.env.get('ZVONOK_CAMPAIGN_CALLBACK') || '';
-
-    async function guard(kind: string) {
+    // Задачка, лимит по IP, лимиты на устройство и номер; при отказе — запись в журнал и текст ошибки
+    async function callGuard(method: 'flash' | 'callback'): Promise<Response | null> {
+      const g = await botGuard('call');
+      if (g) { await note('call', refusalCode(g), logExtra(method)); return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429); }
+      if (await adminDenied(method)) return notAdmin();
       const { data, error } = await admin.rpc('phone_call_allowed', { p_session: sessionKey, p_phone: phone });
       if (error) throw new Error('limit check failed: ' + error.message);
-      if (data) return data as string;
-      await admin.from('phone_verify_log').insert({ session_key: sessionKey, phone, kind });
+      if (data) { await note('call', refusalCode(data as string), logExtra(method)); return fail(data as string, 429); }
+      await admin.from('phone_verify_log').insert({ session_key: sessionKey, phone, kind: method });
+      await note('call', 'sent', logExtra(method));
       return null;
     }
 
@@ -188,10 +247,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'start') {
-      const g = await botGuard('call');
-      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
-      const limit = await guard('flash');
-      if (limit) return fail(limit, 429);
+      const refused = await callGuard('flash');
+      if (refused) return refused;
       let pincode: string;
       if (isTest) {
         pincode = TEST_LOGINS[phone];
@@ -199,7 +256,10 @@ Deno.serve(async (req) => {
         if (!key || !flash) return fail('Вход по звонку ещё не настроен', 503);
         const z = await zvonok('phones/flashcall', { campaign_id: flash, phone: '+' + phone, public_key: key });
         pincode = z.data?.data?.pincode;
-        if (!z.ok || !pincode) return fail('Не получилось позвонить. Попробуйте ещё раз через минуту.', 502);
+        if (!z.ok || !pincode) {
+          await noteResult(phone, 'zvonok_error');
+          return fail('Не получилось позвонить. Попробуйте ещё раз через минуту.', 502);
+        }
       }
       const { error } = await admin.from('phone_verify_codes').upsert({
         session_key: sessionKey, phone, pincode: String(pincode), attempts: 0, created_at: new Date().toISOString()
@@ -209,6 +269,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'confirm') {
+      if (await adminDenied(null)) return notAdmin();
       const code = String(body.code || '').replace(/\D/g, '');
       if (code.length !== 4) return fail('Введите 4 цифры');
       const { data: row } = await admin.from('phone_verify_codes').select('*')
@@ -217,21 +278,21 @@ Deno.serve(async (req) => {
       if (row.attempts >= 5) return fail('Слишком много попыток. Запросите звонок ещё раз.');
       if (String(row.pincode).slice(-4) !== code) {
         await admin.from('phone_verify_codes').update({ attempts: row.attempts + 1 }).eq('session_key', sessionKey);
+        await noteResult(phone, 'wrong');
         const left = 4 - row.attempts;
         return fail(left > 0 ? `Неверный код. Осталось попыток: ${left}` : 'Неверный код. Запросите звонок ещё раз.');
       }
       await admin.from('phone_verify_codes').delete().eq('session_key', sessionKey);
+      await noteResult(phone, 'ok');
       return await finish();
     }
 
     if (action === 'start_fallback') {
       if (!key || !callback) return fail('Запасной способ пока не настроен', 503);
-      const g = await botGuard('call');
-      if (g) return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429);
-      const limit = await guard('callback');
-      if (limit) return fail(limit, 429);
+      const refused = await callGuard('callback');
+      if (refused) return refused;
       const z = await zvonok('phones/confirm', { campaign_id: callback, phone: '+' + phone, public_key: key });
-      if (!z.ok) return fail('Не получилось. Попробуйте ещё раз через минуту.', 502);
+      if (!z.ok) { await noteResult(phone, 'zvonok_error'); return fail('Не получилось. Попробуйте ещё раз через минуту.', 502); }
       const d = z.data?.data || {};
       const numbers = d.allowed_phones_for_call ?? d.number ?? d.phone_number ?? [];
       return json({ ok: true, numbers: Array.isArray(numbers) ? numbers : [numbers].filter(Boolean) });
@@ -239,10 +300,12 @@ Deno.serve(async (req) => {
 
     if (action === 'check_fallback') {
       if (!key || !callback) return fail('Запасной способ пока не настроен', 503);
+      if (await adminDenied(null)) return notAdmin();
       const z = await zvonok('phones/calls_by_phone', { campaign_id: callback, phone: '+' + phone, public_key: key });
       const calls = Array.isArray(z.data) ? z.data : (Array.isArray(z.data?.data) ? z.data.data : []);
       const ok = calls.some((c: any) => ['completed', 'success', 'confirmed', 'answered', 'pincode_ok'].includes(c?.call_status));
       if (!ok) return json({ ok: false, pending: true });
+      await noteResult(phone, 'ok');
       return await finish();
     }
 
