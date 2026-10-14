@@ -1,0 +1,7 @@
+[Unit]
+Description=Уустары бул: дата бесплатного Про в сайте = дата в базе
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ub-free-pro-sync

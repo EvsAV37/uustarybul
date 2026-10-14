@@ -84,8 +84,16 @@ a.back{{display:inline-flex;align-items:center;height:44px;font-size:16px;font-w
 </article></main></body>
 </html>
 '''
+# Дата бесплатного Про в оферте — из базы (как в странице); потом её поддерживает ub-free-pro-sync на сервере
+FREE_PRO_RU = None
+if FREE_PRO:
+    import datetime as _dt
+    _d = _dt.datetime.fromisoformat(FREE_PRO).astimezone(_dt.timezone(_dt.timedelta(hours=9)))  # Якутск, без перехода на летнее время
+    FREE_PRO_RU = '%d %s %d' % (_d.day, ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][_d.month-1], _d.year)
 for src in sorted(glob.glob(os.path.join(ROOT, 'docs', 'src', '*.html'))):
     body = open(src, encoding='utf8').read()
+    if FREE_PRO_RU:
+        body = re.sub(r'<span data-free-pro>[^<]*</span>', '<span data-free-pro>' + FREE_PRO_RU + '</span>', body)
     body = re.sub(r'\[([^\]<>]+)\]', r'<mark>[\1]</mark>', body)
     title = re.search(r'<h1>(.*?)</h1>', body).group(1)
     open(os.path.join(ROOT, 'docs', os.path.basename(src)), 'w', encoding='utf8').write(DOC_TPL.format(title=title, body=body))

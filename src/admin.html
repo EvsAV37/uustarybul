@@ -140,6 +140,42 @@ td.wrap{white-space:normal;min-width:160px}
 .star{color:var(--star);letter-spacing:1px}
 .warn{color:var(--warn);font-weight:600}
 
+/* Справочники и настройки */
+.dlist{flex:1 1 280px;max-width:340px;display:flex;flex-direction:column;gap:2px}
+.dgrp{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mu);margin:14px 12px 4px}
+.di{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-radius:12px;font-size:15px;text-decoration:none;color:var(--fg)}
+.di:hover{background:var(--pl);color:var(--fg)}
+.di.on{background:var(--sf);font-weight:600}
+.di.off{color:var(--mu)}
+.di .tail{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+.ed{flex:999 1 480px;min-width:0;border-radius:22px;background:var(--sf);padding:24px;display:flex;flex-direction:column;gap:18px}
+.fl{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fl>span{font-size:13px;font-weight:600;color:var(--v)}
+.fl small{font-size:12px;color:var(--mu);font-weight:400}
+.in{height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--ln);background:var(--card);font:inherit;font-size:15px;color:var(--fg);width:100%;outline:none}
+.in:focus,.words:focus-within{border-color:var(--fg)}
+select.in{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);background-position:calc(100% - 18px) 19px,calc(100% - 13px) 19px;background-size:5px 5px;background-repeat:no-repeat;cursor:pointer}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.words{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--ln)}
+.words input{border:0;outline:none;font:inherit;font-size:14px;min-width:140px;flex:1;background:transparent;color:var(--fg);height:30px}
+.wd{display:inline-flex;align-items:center;gap:2px;height:30px;padding:0 4px 0 12px;border-radius:15px;font-size:14px;background:var(--nb);white-space:nowrap}
+.wd button{border:0;background:none;width:26px;height:26px;border-radius:13px;cursor:pointer;color:var(--mu);font-size:16px;line-height:1}
+.wd button:hover{color:var(--fg);background:var(--off)}
+@media (min-width:900px){ .ed{position:sticky;top:24px} }
+.swl{display:flex;align-items:center;gap:10px;min-height:44px}
+.sw{width:50px;height:30px;border-radius:15px;background:var(--off);position:relative;flex:none;border:0;cursor:pointer;padding:0}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#FFFFFF;transition:left .15s}
+.sw[aria-checked="true"]{background:var(--okt)}
+.sw[aria-checked="true"]::after{left:23px}
+.sw:disabled{opacity:.5;cursor:default}
+.lim{width:100%;border-collapse:collapse;font-size:15px;min-width:0}
+.lim th,.lim td{padding:12px 0;white-space:normal}
+.lim td+td,.lim th+th{text-align:right;padding-left:12px}
+.lim tbody tr{cursor:default}
+.lim tbody tr:hover td{background:transparent}
+.bigv{font-size:30px;font-weight:700;letter-spacing:-.01em}
+.sets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+
 /* Окна */
 .scrim{position:fixed;inset:0;background:var(--scrim);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
 .sheet{background:var(--bg);border-radius:22px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
@@ -188,14 +224,21 @@ td.wrap{white-space:normal;min-width:160px}
   .queue{max-width:none}
   .case{padding:0;background:transparent}
   .cmp{background:var(--sf)}
-  .split.detail>.grow,.split.detail>.queue{display:none}
-  .split.list>.panel,.split.list>.case{display:none}
+  .split.detail>.grow,.split.detail>.queue,.split.detail>.dlist{display:none}
+  .split.list>.panel,.split.list>.case,.split.list>.ed{display:none}
+  .dlist{max-width:none}
+  .ed{padding:0;background:transparent;gap:14px}
+  .g3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .g3>.wide{grid-column:span 2}
+  .in{font-size:16px}
+  .sets{grid-template-columns:minmax(0,1fr)}
+  .bigv{font-size:26px}
   #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
   .scrim{align-items:flex-end;padding:0}
   .sheet{border-radius:22px 22px 0 0;max-width:none;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 }
 @media (min-width:900px){ .ponly{display:none!important} }
-@media (min-width:900px) and (max-width:1199px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .cards3{grid-template-columns:minmax(0,1fr)} .rvs{grid-template-columns:repeat(2,minmax(0,1fr))} .main{padding:28px 28px 40px} }
+@media (min-width:900px) and (max-width:1199px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} .cards3{grid-template-columns:minmax(0,1fr)} .rvs{grid-template-columns:repeat(2,minmax(0,1fr))} .main{padding:28px 28px 40px} .g3{grid-template-columns:repeat(2,minmax(0,1fr))} .sets{grid-template-columns:minmax(0,1fr)} }
 </style>
 </head>
 <body>
@@ -284,7 +327,13 @@ function rpc(name, args){
   });
 }
 var ERR = { not_found:'Не найдено', bad_action:'Недопустимое действие', bad_reason:'Выберите причину', admin_password_short:'Пароль — не короче 10 символов',
-  admin_password_wrong:'Старый пароль неверный', admin_no_session:'Войдите по номеру заново', admin_owner_required:'Нужны права владельца' };
+  admin_password_wrong:'Старый пароль неверный', admin_no_session:'Войдите по номеру заново', admin_owner_required:'Менять может только владелец',
+  cat_name:'Название — от 2 до 40 символов', cat_plural:'Множественное число — от 2 до 60 символов', cat_short:'Короткое название — до 20 символов',
+  cat_grp:'Выберите или впишите группу', cat_sort:'Порядок — число от 0 до 9999', cat_keywords:'Слишком много слов для поиска', cat_hint:'Подсказка слишком длинная',
+  cat_exists:'Такая сфера уже есть', home_full:'На главной уже 8 плиток — сначала уберите одну', cat_in_use:'Скрыть нельзя: у мастеров есть направления этой сферы',
+  city_name:'Название города — от 2 до 60 символов', city_region:'Регион — от 2 до 80 символов', city_tz:'Выберите часовой пояс', city_sort:'Порядок — число от 0 до 9999',
+  city_exists:'Такой город уже есть', city_in_use:'Скрыть нельзя: в городе есть мастера', city_last:'Нужен хотя бы один город',
+  free_pro_date:'Выберите дату', free_pro_past:'Дата уже прошла', free_pro_earlier:'Можно только продлить: выберите дату позже нынешней', free_pro_far:'Не дальше чем на 3 года вперёд' };
 
 /* ---------- вход: номер → код → пароль ---------- */
 function gate(inner){ $('app').innerHTML = '<div class="gate"><div class="gbox"><div class="brand"><span class="logo" aria-hidden="true"></span>Уустары бул · Управление</div>'+inner+'</div></div>'; }
@@ -415,8 +464,8 @@ function boot(){
 }
 
 /* ---------- оболочка ---------- */
-var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl']];
-var LATER = [['Справочники','dir','этап 2'],['Рассылка','bell','этап 2'],['Настройки','set','этап 2'],['Защита и журналы','shield','этап 2'],['Платежи','card','с 2027']];
+var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['settings','Настройки','set']];
+var LATER = [['Рассылка','bell','скоро'],['Защита и журналы','shield','скоро'],['Платежи','card','с 2027']];
 function citySelect(id){
   return '<label class="citysel"><span class="d" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Город</span><select id="'+id+'" aria-label="Город">'+
     '<option value="">Все города</option>'+A.cities.map(function(c){ return '<option value="'+c.id+'"'+(A.city===c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>';
@@ -432,13 +481,18 @@ function shell(sec, html){
     '</nav><div class="foot">'+themeSeg('sm')+
     '<span><b style="color:var(--fg)">'+esc(A.me.phone||'')+'</b> · '+(A.me.role==='owner'?'владелец':'модератор')+'</span>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap"><a href="../" target="_blank" rel="noopener" style="font-weight:600">Открыть приложение ›</a><button type="button" class="link" data-act="pw" style="font-weight:500;color:var(--mu)">Пароль</button><button type="button" class="link" data-act="lock" style="font-weight:500;color:var(--mu)">Выйти</button></div></div></aside>';
+  var tsec = sec==='dirs'||sec==='settings' ? 'more' : sec;
   var tabs = '<nav class="tabs" aria-label="Разделы">'+[['overview','Обзор','over'],['complaints','Жалобы','compl'],['masters','Мастера','masters'],['more','Ещё','more']].map(function(n){
     var dot = n[0]==='complaints' && b.complaints ? '<span class="dot">'+b.complaints+'</span>' : '';
-    return '<a href="#'+n[0]+'" class="'+(sec===n[0]?'on':'')+'"'+(sec===n[0]?' aria-current="page"':'')+'>'+ic(n[2],24)+n[1]+dot+'</a>'; }).join('')+'</nav>';
+    return '<a href="#'+n[0]+'" class="'+(tsec===n[0]?'on':'')+'"'+(tsec===n[0]?' aria-current="page"':'')+'>'+ic(n[2],24)+n[1]+dot+'</a>'; }).join('')+'</nav>';
   $('app').innerHTML = '<div class="shell">'+side+'<main class="main" id="main">'+html+'</main>'+tabs+'</div>';
   var cs = $('city'); if(cs) cs.onchange = function(){ setCity(cs.value); };
 }
-function setCity(v){ A.city = v==='' ? null : Number(v); store('ub_admin_city', A.city==null ? null : String(A.city)); A.cache={}; route(); }
+function setCity(v){
+  var go = function(){ A.dirty=false; A.city = v==='' ? null : Number(v); store('ub_admin_city', A.city==null ? null : String(A.city)); A.cache={}; A.dirs=null; route(); };
+  if(A.dirty) return confirmBox('Выйти без сохранения?', 'Изменения в справочнике пропадут.', 'Выйти', true, go);
+  go();
+}
 function ptop(title, back, over){
   return '<div class="ptop">'+(back ? '<a class="back" href="'+back+'" aria-label="Назад">‹</a><b class="ttl">'+esc(title)+'</b>'
     : '<div style="display:flex;flex-direction:column">'+(over?'<span class="d" style="font-weight:600">'+esc(over)+'</span>':'')+'<b class="big">'+esc(title)+'</b></div>')+
@@ -519,9 +573,23 @@ function route(){
   if(sec==='complaints') return pageComplaints(id);
   if(sec==='reviews'){ A.ctab='reviews'; return pageComplaints(null); }
   if(sec==='more') return pageMore();
+  if(sec==='dirs') return pageDirs(h[1]||null, h[2]||null);
+  if(sec==='settings') return pageSettings();
   return pageOverview();
 }
-window.addEventListener('hashchange', function(){ if(A.me) route(); });
+// Несохранённая правка справочника: перед уходом — спросить
+var lastHash = location.hash, skipHash = false;
+window.addEventListener('hashchange', function(){
+  if(!A.me) return;
+  if(skipHash){ skipHash=false; lastHash=location.hash; return; }
+  if(A.dirty){
+    var to = location.hash; skipHash = true; location.hash = lastHash;
+    confirmBox('Выйти без сохранения?', 'Изменения в справочнике пропадут.', 'Выйти', true, function(){ A.dirty=false; location.hash = to; });
+    return;
+  }
+  lastHash = location.hash; route();
+});
+window.addEventListener('beforeunload', function(e){ if(A.dirty){ e.preventDefault(); e.returnValue=''; } });
 
 /* ---------- Обзор ---------- */
 var PERIODS = [[1,'День'],[7,'Неделя'],[30,'Месяц']];
@@ -580,7 +648,7 @@ function pageOverview(){
       '<div class="row"><span style="flex:1">Очередь push</span>'+(s.push_queue?'<span class="chip yel">'+s.push_queue+'</span>':'<span class="chip grn">пусто</span>')+'</div>'+
       '<div class="row"><span style="flex:1">Ошибки push за сутки</span>'+(s.push_failed?'<span class="chip red">'+s.push_failed+'</span>':'<span class="chip grn">нет</span>')+'</div>'+
       '<div class="row"><span style="flex:1">Аккаунты на удаление</span>'+(s.deletions?'<span class="chip gry">'+s.deletions+'</span>':'<span class="chip grn">нет</span>')+'</div>'+
-      (s.free_pro_until ? '<div class="row"><span style="flex:1">Бесплатный Про</span><span class="chip gry">до '+dm(s.free_pro_until)+' '+new Date(s.free_pro_until).getFullYear()+'</span></div>' : '')+
+      (s.free_pro_until ? '<a class="row" href="#settings"><span style="flex:1">Бесплатный Про</span><span class="chip gry">до '+dm(s.free_pro_until)+' '+new Date(s.free_pro_until).getFullYear()+'</span></a>' : '')+
       '</div></section>';
     var main = $('main'), keep = main.querySelector('.ptop').outerHTML + main.querySelector('.dhead').outerHTML + $('perB').outerHTML;
     main.innerHTML = keep + tiles + chart + '<div class="cards3">'+needs+misses+sys+'</div>';
@@ -798,12 +866,278 @@ function renderResolved(r){
     : '<div class="empty">Решённых жалоб пока нет.</div>';
 }
 
+/* ---------- Справочники ---------- */
+var DT = [['cats','Сферы'],['cities','Города'],['limits','Тарифы и лимиты']];
+var UNITS = ['за час','за м²','за шт.','за выезд','за работу','за сеанс','за процедуру','за колесо','за машину','договорная'];
+function isOwner(){ return A.me && A.me.role==='owner'; }
+function loadDirs(){ return rpc('admin_dirs',{p_city:A.city}).then(function(d){ A.dirs=d; return d; }); }
+function sw(id, on, label, dis){ return '<button type="button" class="sw" role="switch" id="'+id+'" aria-checked="'+(!!on)+'" aria-label="'+esc(label)+'"'+(dis?' disabled':'')+'></button>'; }
+function bindSw(id, onChange){ var b=$(id); if(!b) return; b.onclick=function(){ var v = b.getAttribute('aria-checked')!=='true'; b.setAttribute('aria-checked', v); if(onChange) onChange(v); }; }
+function swOn(id){ var b=$(id); return !!b && b.getAttribute('aria-checked')==='true'; }
+function pageDirs(tab, id){
+  tab = DT.some(function(t){ return t[0]===tab; }) ? tab : (A.dtab||'cats');
+  A.dtab = tab; A.dirty = false;
+  var detail = !!id;
+  var d = A.dirs;
+  var cnt = function(t){ if(!d) return ''; if(t==='cats') return ' · '+d.categories.length; if(t==='cities') return ' · '+d.cities.length; return ''; };
+  var seg = '<div class="seg" role="group" aria-label="Справочник">'+DT.map(function(t){
+    return '<button type="button" data-dt="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'" aria-pressed="'+(tab===t[0])+'">'+t[1]+cnt(t[0])+'</button>'; }).join('')+'</div>';
+  shell('dirs', (detail ? '' : ptop('Справочники', '#more'))+
+    '<div class="dhead" style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px"><div><h1 class="h1">Справочники</h1><div class="sub">Меняются сразу во всех приложениях, без обновления'+(isOwner()?'':' · менять может только владелец')+'</div></div>'+seg+'</div>'+
+    (detail ? '' : '<div class="ponly">'+seg.replace('class="seg"','class="seg" style="display:flex"')+'</div>')+
+    '<div id="dbody"><div class="skel" style="height:420px"></div></div>');
+  document.querySelectorAll('[data-dt]').forEach(function(b){ b.onclick = function(){ location.hash = '#dirs/'+b.getAttribute('data-dt'); }; });
+  var v = location.hash;
+  loadDirs().then(function(nd){
+    if(location.hash!==v) return;
+    d = nd;
+    document.querySelectorAll('[data-dt]').forEach(function(b){ var t=b.getAttribute('data-dt'); b.textContent = DT.filter(function(x){return x[0]===t;})[0][1]+cnt(t); });
+    if(tab==='cats') return dirCats(d, id);
+    if(tab==='cities') return dirCities(d, id);
+    return dirLimits(d);
+  }).catch(function(err){ $('dbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+function grpList(d){ var g=[]; d.categories.forEach(function(c){ if(c.grp && g.indexOf(c.grp)<0) g.push(c.grp); }); return g; }
+function dirCats(d, id){
+  var cats = d.categories, cur = null;
+  if(id==='new') cur = { id:null, name:'', name_plural:'', short_name:'', grp:'', sort:'', on_home:false, is_active:true, keywords:'', hint_service:'', hint_unit:'', hint_query:'', spheres:0, masters:0 };
+  else if(id) cur = cats.filter(function(c){ return String(c.id)===String(id); })[0];
+  if(!cur && window.matchMedia('(min-width:900px)').matches && cats.length){ cur = cats[0]; id = String(cur.id); }
+  var detail = !!(location.hash.split('/')[2]);
+  var homeN = cats.filter(function(c){ return c.on_home && c.is_active; }).length;
+  var list = '<nav class="dlist" aria-label="Сферы">'+(isOwner()?'<a class="btn" href="#dirs/cats/new" style="align-self:flex-start;margin:0 0 6px">+ Новая сфера</a>':'');
+  var g = null;
+  cats.forEach(function(c){
+    if(c.grp!==g){ g=c.grp; list += '<div class="dgrp">'+esc(g||'Без группы')+'</div>'; }
+    var on = cur && cur.id===c.id;
+    list += '<a class="di'+(on?' on':'')+(c.is_active?'':' off')+'" href="#dirs/cats/'+c.id+'"'+(on?' aria-current="true"':'')+'><span style="min-width:0">'+esc(c.name)+'</span><span class="tail">'+
+      (!c.is_active ? '<span class="chip gry">скрыта</span>' : c.on_home ? '<span class="chip grn">на главной</span>' : '')+
+      (c.masters ? '<span class="d">'+c.masters+'</span>' : '')+'</span></a>';
+  });
+  list += '</nav>';
+  $('dbody').innerHTML = '<div class="split '+(detail?'detail':'list')+'">'+list+(cur ? catEditor(d, cur, homeN) : (id ? '<section class="ed"><div class="empty">Сфера не найдена</div></section>' : ''))+'</div>';
+  if(cur) bindCatEditor(d, cur, homeN);
+}
+function catEditor(d, c, homeN){
+  var ro = !isOwner(), dis = ro ? ' disabled' : '';
+  var groups = grpList(d), isNew = c.id==null;
+  var grpOpts = (isNew && !c.grp ? '<option value="" selected>Выберите</option>' : '')+groups.map(function(g){ return '<option'+(g===c.grp?' selected':'')+'>'+esc(g)+'</option>'; }).join('')+'<option value="__new">Новая группа…</option>';
+  var kw = (c.keywords||'').split(/\s+/).filter(function(w, i, a){ return w && a.indexOf(w)===i; });
+  var homeHint = c.on_home ? homeN+' из '+d.home_max+' мест' : (homeN>=d.home_max ? 'все '+d.home_max+' мест заняты' : homeN+' из '+d.home_max+' мест заняты');
+  var where = A.city==null ? '' : ' в городе «'+cityName()+'»';
+  var stat = isNew ? 'Новая сфера' : (c.masters ? c.masters+' '+plural(c.masters,'мастер','мастера','мастеров')+' с активной карточкой'+where : 'Мастеров с активной карточкой'+where+' нет');
+  return '<section class="ed" aria-label="Сфера">'+
+    '<div class="ptop"><a class="back" href="#dirs/cats" aria-label="Назад к сферам">‹</a><b class="ttl">'+esc(isNew?'Новая сфера':c.name)+'</b><span class="logo" role="img" aria-label="Знак Уустары бул"></span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 class="dhead" style="margin:0;font-size:24px;font-weight:700">'+esc(isNew?'Новая сфера':c.name)+'</h2><span class="d">'+esc(stat)+'</span></div>'+
+    '<form id="cf" style="display:flex;flex-direction:column;gap:18px" autocomplete="off">'+
+    '<div class="g3">'+
+      '<label class="fl"><span>Название</span><input class="in" id="c_name" maxlength="40" value="'+esc(c.name)+'" placeholder="Например, Печник"'+dis+'></label>'+
+      '<label class="fl"><span>Во множественном</span><input class="in" id="c_plural" maxlength="60" value="'+esc(c.name_plural||'')+'" placeholder="Печники"'+dis+'></label>'+
+      '<label class="fl wide"><span>Коротко, для плитки</span><input class="in" id="c_short" maxlength="20" value="'+esc(c.short_name||'')+'" placeholder="не нужно"'+dis+'></label>'+
+    '</div>'+
+    '<div class="g3">'+
+      '<label class="fl"><span>Группа</span><select class="in" id="c_grp"'+dis+'>'+grpOpts+'</select><input class="in" id="c_grp_new" maxlength="30" placeholder="Название группы" hidden></label>'+
+      '<label class="fl"><span>Порядок <small>— меньше значит выше</small></span><input class="in" id="c_sort" inputmode="numeric" maxlength="4" value="'+esc(c.sort)+'" placeholder="'+(isNew?'по умолчанию в конец':'')+'"'+dis+'></label>'+
+      '<div class="fl wide"><span>Плитка на главной</span><div class="swl">'+sw('c_home', c.on_home, 'Плитка на главной', ro || (!c.on_home && homeN>=d.home_max))+'<span class="d" id="c_home_h">'+esc(homeHint)+'</span></div></div>'+
+    '</div>'+
+    '<div class="fl"><span>Слова для поиска — по ним находят мастера <small>(Enter или запятая — добавить)</small></span>'+
+      '<div class="words" id="c_words">'+kw.map(function(w){ return wordChip(w, ro); }).join('')+(ro?'':'<input id="c_word" aria-label="Новое слово для поиска" placeholder="добавить слово" maxlength="30">')+'</div></div>'+
+    '<div class="g3">'+
+      '<label class="fl"><span>Пример услуги в форме</span><input class="in" id="c_hs" maxlength="60" value="'+esc(c.hint_service||'')+'" placeholder="Кладка печи"'+dis+'></label>'+
+      '<label class="fl"><span>Единица по умолчанию</span><input class="in" id="c_hu" maxlength="30" list="units" value="'+esc(c.hint_unit||'')+'" placeholder="за работу"'+dis+'><datalist id="units">'+UNITS.map(function(u){ return '<option value="'+esc(u)+'">'; }).join('')+'</datalist></label>'+
+      '<label class="fl wide"><span>Пример запроса в поиске</span><input class="in" id="c_hq" maxlength="60" value="'+esc(c.hint_query||'')+'" placeholder="печь или дымоход"'+dis+'></label>'+
+    '</div>'+
+    '<div class="fl"><span>Показывать в приложении</span><div class="swl">'+sw('c_act', c.is_active, 'Показывать в приложении', ro || (c.is_active && c.spheres>0))+
+      '<span class="d">'+(c.is_active && c.spheres>0 ? 'Скрыть нельзя: '+c.spheres+' '+plural(c.spheres,'направление','направления','направлений')+' у мастеров' : c.is_active ? 'Сфера видна заказчикам и мастерам' : 'Скрыта: её не видно в приложении')+'</span></div></div>'+
+    (ro ? '<div class="note">Менять справочники может только владелец.</div>' :
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="submit" class="btn pr" id="c_save">'+(isNew?'Добавить сферу':'Сохранить')+'</button><button type="button" class="btn" id="c_cancel">Отмена</button>'+
+      '<span class="d" style="margin-left:auto">'+(isNew?'Сфера появится в приложении сразу':'Переименование и слова пересчитают поиск у всех направлений этой сферы')+'</span></div>')+
+    '</form></section>';
+}
+function wordChip(w, ro){ return '<span class="wd" data-w="'+esc(w)+'">'+esc(w)+(ro?'':'<button type="button" aria-label="Убрать слово '+esc(w)+'">×</button>')+'</span>'; }
+function bindCatEditor(d, c, homeN){
+  if(!isOwner()) return;
+  var f = $('cf'), wi = $('c_word');
+  var dirty = function(){ A.dirty = true; };
+  f.addEventListener('input', dirty); f.addEventListener('change', dirty);
+  $('c_grp').onchange = function(){ var n = $('c_grp').value==='__new'; $('c_grp_new').hidden = !n; if(n) $('c_grp_new').focus(); dirty(); };
+  bindSw('c_home', function(v){ dirty(); $('c_home_h').textContent = (v ? homeN + (c.on_home?0:1) : homeN - (c.on_home?1:0))+' из '+d.home_max+' мест'; });
+  bindSw('c_act', dirty);
+  function addWord(){
+    var parts = wi.value.toLowerCase().split(/[\s,;]+/).map(function(w){ return w.replace(/[^a-z0-9а-яёҕҥөһү-]/g,''); }).filter(function(w){ return w.length>=2; });
+    parts.forEach(function(w){ if(!f.querySelector('.wd[data-w="'+w+'"]')) wi.insertAdjacentHTML('beforebegin', wordChip(w)); });
+    wi.value=''; if(parts.length) dirty();
+  }
+  wi.addEventListener('keydown', function(e){
+    if(e.key==='Enter' || e.key===','){ e.preventDefault(); addWord(); }
+    else if(e.key==='Backspace' && !wi.value){ var ws=f.querySelectorAll('.wd'); if(ws.length){ ws[ws.length-1].remove(); dirty(); } }
+  });
+  wi.addEventListener('blur', addWord);
+  $('c_words').addEventListener('click', function(e){ var b=e.target.closest('.wd button'); if(b){ b.parentNode.remove(); dirty(); wi.focus(); } });
+  $('c_cancel').onclick = function(){ A.dirty=false; if(c.id==null) location.hash='#dirs/cats'; else pageDirs('cats', String(c.id)); };
+  f.addEventListener('submit', function(e){
+    e.preventDefault(); addWord();
+    var grp = $('c_grp').value==='__new' ? $('c_grp_new').value : $('c_grp').value;
+    var sort = $('c_sort').value.trim();
+    if(sort==='' && c.id==null){ var same = d.categories.filter(function(x){ return x.grp===grp; }); sort = same.length ? Math.max.apply(null, same.map(function(x){return x.sort;}))+10 : Math.max.apply(null, d.categories.map(function(x){return x.sort;}).concat([0]))+100; }
+    if(!/^\d{1,4}$/.test(String(sort))) return toast(ERR.cat_sort);
+    var body = { name:$('c_name').value, name_plural:$('c_plural').value, short_name:$('c_short').value, grp:grp, sort:Number(sort),
+      on_home:swOn('c_home'), is_active:swOn('c_act'), keywords:[].map.call(f.querySelectorAll('.wd'), function(x){ return x.getAttribute('data-w'); }).join(' '),
+      hint_service:$('c_hs').value, hint_unit:$('c_hu').value, hint_query:$('c_hq').value };
+    var b = $('c_save'); b.disabled = true;
+    rpc('admin_category_save', {p_id:c.id, p:body}).then(function(r){
+      A.dirty = false; toast(c.id==null ? 'Сфера добавлена' : 'Сохранено');
+      return loadDirs().then(function(){ if(c.id==null) location.hash = '#dirs/cats/'+r.id; else pageDirs('cats', String(c.id)); });
+    }, function(err){ b.disabled = false; toast(err.message); });
+  });
+}
+function tzLabel(d, name){ var t = (d.tz||[]).filter(function(x){ return x.name===name; })[0]; return t ? 'UTC+'+t.offset+' · '+t.label : name; }
+function dirCities(d, id){
+  var cs = d.cities, cur = null;
+  if(id==='new') cur = { id:null, name:'', region:'Республика Саха (Якутия)', tz:'Asia/Yakutsk', sort:'', is_active:true, masters:0, active:0 };
+  else if(id) cur = cs.filter(function(c){ return String(c.id)===String(id); })[0];
+  if(!cur && window.matchMedia('(min-width:900px)').matches && cs.length){ cur = cs[0]; }
+  var detail = !!(location.hash.split('/')[2]);
+  var list = '<nav class="dlist" aria-label="Города">'+(isOwner()?'<a class="btn" href="#dirs/cities/new" style="align-self:flex-start;margin:0 0 10px">+ Новый город</a>':'')+
+    cs.map(function(c){ var on = cur && cur.id===c.id;
+      return '<a class="di'+(on?' on':'')+(c.is_active?'':' off')+'" href="#dirs/cities/'+c.id+'"'+(on?' aria-current="true"':'')+'><span style="min-width:0;display:flex;flex-direction:column"><span>'+esc(c.name)+'</span><span class="d" style="font-weight:400">'+esc(c.region)+'</span></span><span class="tail">'+
+        (c.is_active ? '<span class="d">'+c.masters+' '+plural(c.masters,'мастер','мастера','мастеров')+'</span>' : '<span class="chip gry">скрыт</span>')+'</span></a>'; }).join('')+'</nav>';
+  $('dbody').innerHTML = '<div class="split '+(detail?'detail':'list')+'">'+list+(cur ? cityEditor(d, cur) : (id ? '<section class="ed"><div class="empty">Город не найден</div></section>' : ''))+'</div>';
+  if(cur) bindCityEditor(d, cur);
+}
+function cityEditor(d, c){
+  var ro = !isOwner(), dis = ro ? ' disabled' : '', isNew = c.id==null;
+  var stat = isNew ? 'Новый город' : c.masters+' '+plural(c.masters,'мастер','мастера','мастеров')+(c.masters?', с активной карточкой '+c.active:'');
+  return '<section class="ed" aria-label="Город">'+
+    '<div class="ptop"><a class="back" href="#dirs/cities" aria-label="Назад к городам">‹</a><b class="ttl">'+esc(isNew?'Новый город':c.name)+'</b><span class="logo" role="img" aria-label="Знак Уустары бул"></span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 class="dhead" style="margin:0;font-size:24px;font-weight:700">'+esc(isNew?'Новый город':c.name)+'</h2><span class="d">'+esc(stat)+'</span></div>'+
+    '<form id="yf" style="display:flex;flex-direction:column;gap:18px" autocomplete="off">'+
+    '<div class="g3">'+
+      '<label class="fl"><span>Название</span><input class="in" id="y_name" maxlength="60" value="'+esc(c.name)+'" placeholder="Например, Ленск"'+dis+'></label>'+
+      '<label class="fl wide" style="grid-column:span 2"><span>Регион</span><input class="in" id="y_region" maxlength="80" value="'+esc(c.region)+'"'+dis+'></label>'+
+    '</div>'+
+    '<div class="g3">'+
+      '<label class="fl wide" style="grid-column:span 2"><span>Часовой пояс <small>— по нему считаются тихие часы уведомлений</small></span><select class="in" id="y_tz"'+dis+'>'+(d.tz||[]).map(function(t){ return '<option value="'+esc(t.name)+'"'+(t.name===c.tz?' selected':'')+'>UTC+'+t.offset+' · '+esc(t.label)+'</option>'; }).join('')+'</select></label>'+
+      '<label class="fl"><span>Порядок в списке</span><input class="in" id="y_sort" inputmode="numeric" maxlength="4" value="'+esc(c.sort)+'" placeholder="'+(isNew?'в конец':'')+'"'+dis+'></label>'+
+    '</div>'+
+    '<div class="fl"><span>Показывать в приложении</span><div class="swl">'+sw('y_act', c.is_active, 'Показывать в приложении', ro || (c.is_active && c.masters>0))+
+      '<span class="d">'+(c.is_active && c.masters>0 ? 'Скрыть нельзя: в городе есть мастера' : c.is_active ? 'Город есть в списке у заказчиков и мастеров' : 'Скрыт: его нет в списке городов')+'</span></div></div>'+
+    (ro ? '<div class="note">Менять справочники может только владелец.</div>' :
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="submit" class="btn pr" id="y_save">'+(isNew?'Добавить город':'Сохранить')+'</button><button type="button" class="btn" id="y_cancel">Отмена</button>'+
+      '<span class="d" style="margin-left:auto">'+(isNew?'Город появится в списке сразу. Если мастеров ещё нет, выдача будет пустой — можно добавить скрытым.':'')+'</span></div>')+
+    '</form></section>';
+}
+function bindCityEditor(d, c){
+  if(!isOwner()) return;
+  var f = $('yf'), dirty = function(){ A.dirty = true; };
+  f.addEventListener('input', dirty); f.addEventListener('change', dirty);
+  bindSw('y_act', dirty);
+  $('y_cancel').onclick = function(){ A.dirty=false; if(c.id==null) location.hash='#dirs/cities'; else pageDirs('cities', String(c.id)); };
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var sort = $('y_sort').value.trim();
+    if(sort==='') sort = Math.max.apply(null, d.cities.map(function(x){ return x.sort; }).concat([0]))+1;
+    if(!/^\d{1,4}$/.test(String(sort))) return toast(ERR.city_sort);
+    var body = { name:$('y_name').value, region:$('y_region').value, tz:$('y_tz').value, sort:Number(sort), is_active:swOn('y_act') };
+    var go = function(){
+      var b = $('y_save'); b.disabled = true;
+      rpc('admin_city_save', {p_id:c.id, p:body}).then(function(r){
+        A.dirty = false; toast(c.id==null ? 'Город добавлен' : 'Сохранено');
+        return loadDirs().then(function(){
+          if(c.id==null) location.hash = '#dirs/cities/'+r.id; else pageDirs('cities', String(c.id));
+          return sb.from('cities').select('id,name').order('sort').then(function(x){ A.cities = x.data||A.cities; });
+        });
+      }, function(err){ b.disabled = false; toast(err.message); });
+    };
+    if(c.id!=null && body.tz!==c.tz && c.masters) return confirmBox('Сменить часовой пояс?', 'Тихие часы уведомлений у '+c.masters+' '+plural(c.masters,'мастера','мастеров','мастеров')+' будут считаться по новому поясу: '+tzLabel(d, body.tz)+'.', 'Сменить', false, go);
+    go();
+  });
+}
+function dirLimits(d){
+  var f = (d.limits||{}).free||{}, p = (d.limits||{}).pro||{};
+  var lim = function(x){ return x==null ? 'без лимита' : num(x); };
+  $('dbody').innerHTML = '<div class="sets"><section class="card"><h2 class="h2">Тарифы и лимиты</h2>'+
+    '<table class="lim"><thead><tr><th></th><th>Бесплатно</th><th>Про</th></tr></thead><tbody>'+
+    '<tr><td>Направлений</td><td>'+lim(f.spheres)+'</td><td>'+lim(p.spheres)+'</td></tr>'+
+    '<tr><td>Услуг в направлении</td><td>'+lim(f.services)+'</td><td>'+lim(p.services)+'</td></tr>'+
+    '<tr><td>Фото в направлении</td><td>'+lim(f.photos)+'</td><td>'+lim(p.photos)+'</td></tr>'+
+    '<tr><td>Цена</td><td>—</td><td>990 ₽ / мес · 2 490 ₽ / 3 мес</td></tr>'+
+    '<tr><td>Пробный период</td><td>—</td><td>3 месяца, один раз на номер</td></tr></tbody></table>'+
+    '<div class="note">Лимиты и цены записаны в Соглашении и оферте, поэтому здесь только для просмотра. Менять — вместе с документами: скажите Claude, он поправит базу, тексты в приложении и документы разом.</div></section>'+
+    '<section class="card"><h2 class="h2">Бесплатный Про для всех</h2>'+(d.free_pro && d.free_pro.until ? '<div class="bigv">до '+dmy(d.free_pro.until)+'</div>' : '<div class="d">Не задан</div>')+
+    '<a class="btn" href="#settings" style="align-self:flex-start">Изменить в настройках ›</a></section></div>';
+}
+
+/* ---------- Настройки ---------- */
+function daysLeft(iso){ return Math.ceil((new Date(iso) - new Date())/864e5); }
+function pageSettings(){
+  A.dirty = false;
+  shell('settings', ptop('Настройки', '#more')+
+    '<div class="dhead"><h1 class="h1">Настройки</h1><div class="sub">Каждое изменение пишется в журнал: кто, когда, что было и что стало</div></div>'+
+    '<div id="sbody"><div class="skel" style="height:260px"></div></div>');
+  var v = location.hash;
+  loadDirs().then(function(d){
+    if(location.hash!==v) return;
+    var fp = d.free_pro||{}, until = fp.until, going = until && new Date(until) > new Date(), left = until ? daysLeft(until) : 0;
+    $('sbody').innerHTML = '<div class="sets">'+
+      '<section class="card" aria-label="Бесплатный Про">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Бесплатный Про для всех</h2>'+(going?'<span class="chip grn">идёт</span>':'<span class="chip gry">закончился</span>')+'</div>'+
+        (until ? '<div class="bigv">до '+dmy(until)+'</div>' : '<div class="d">Дата не задана</div>')+
+        '<div class="d" style="line-height:1.5">'+(going ? 'Осталось '+num(left)+' '+plural(left,'день','дня','дней')+'. ' : '')+
+          (going ? 'Сейчас Про до этой даты у '+num(fp.pro_now)+' '+plural(fp.pro_now,'мастера','мастеров','мастеров')+'. ' : '')+
+          'Напоминания мастерам — за 30 и за 7 дней. При продлении Про у всех переедет на новую дату сам, а на сайте и в оферте дата обновится в течение 5 минут.</div>'+
+        (isOwner() ? '<button type="button" class="btn pr" id="fp_ext" style="align-self:flex-start">Продлить</button>' : '<div class="note">Менять может только владелец.</div>')+
+        '<div class="d">Закончить раньше нельзя: в оферте (п. 3.6) обещано до этой даты, продлевать — можно.</div>'+
+      '</section>'+
+      '<section class="card"><h2 class="h2">Ещё в настройках</h2><div class="d" style="line-height:1.5">Кто управляет, «Перед запуском» (тестовые номера, демо-мастера) и документы появятся в следующей части. Тарифы и лимиты — в разделе <a href="#dirs/limits">Справочники</a>.</div></section>'+
+      '</div>';
+    var b = $('fp_ext'); if(b) b.onclick = function(){ extendFreePro(until); };
+  }).catch(function(err){ $('sbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function ymdText(s){ var p=s.split('-'); return Number(p[2])+' '+MG[Number(p[1])-1]+' '+p[0]; }
+function extendFreePro(until){
+  // дата в календаре — по Якутску (как в базе: конец дня по Якутску)
+  var yk = function(t){ var p = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Yakutsk', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date(t)).split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2])); };
+  var base = until && new Date(until) > new Date() ? yk(until) : yk(Date.now());
+  var min = new Date(base); min.setDate(min.getDate()+1);
+  var max = yk(Date.now()); max.setFullYear(max.getFullYear()+3); max.setDate(max.getDate()-1);
+  var def = new Date(base); def.setMonth(def.getMonth()+3);
+  if(def > max) def = max;
+  sheet('<h2>Продлить бесплатный Про</h2><p>'+(until?'Сейчас — до '+esc(dmy(until))+'. ':'')+'Новая дата — включительно, до конца дня по Якутску.</p>'+
+    '<label class="field">До какой даты<input id="fp_d" class="inp" type="date" min="'+isoDate(min)+'" max="'+isoDate(max)+'" value="'+isoDate(def)+'"></label>'+
+    '<p id="fp_info" style="min-height:44px">Считаем…</p>'+
+    '<button type="button" class="btn big pr" id="fp_ok" disabled>Продлить</button><button type="button" class="btn big" data-close>Отмена</button>',
+    function(){
+      var inp = $('fp_d'), info = $('fp_info'), ok = $('fp_ok'), seq = 0;
+      function check(){
+        var val = inp.value, my = ++seq; ok.disabled = true;
+        if(!val){ info.textContent = 'Выберите дату'; return; }
+        rpc('admin_free_pro_set', {p_date:val, p_dry:true}).then(function(r){
+          if(my!==seq) return;
+          info.textContent = (r.restart ? 'Бесплатный Про начнётся снова: ' : 'Про продлится у ')+num(r.profiles)+' '+plural(r.profiles,'мастера','мастеров','мастеров')+'. Мастера увидят новую дату в кабинете.';
+          ok.disabled = false; ok.textContent = 'Продлить до '+ymdText(val);
+        }, function(err){ if(my===seq) info.textContent = err.message; });
+      }
+      inp.addEventListener('change', check); inp.addEventListener('input', check); check();
+      ok.onclick = function(){
+        ok.disabled = true;
+        rpc('admin_free_pro_set', {p_date:inp.value, p_dry:false}).then(function(r){
+          closeSheet(); toast('Продлено до '+ymdText(inp.value)+' · Про у '+num(r.profiles)+' '+plural(r.profiles,'мастера','мастеров','мастеров'));
+          pageSettings();
+        }, function(err){ ok.disabled = false; toast(err.message); });
+      };
+    });
+}
+
 /* ---------- Ещё (телефон) ---------- */
 function pageMore(){
   if(window.matchMedia('(min-width:900px)').matches){ location.hash='#overview'; return; }
   shell('more', ptop('Ещё')+
     '<div class="grp" style="padding:8px 14px">'+citySelect('city2')+'</div>'+
     '<div class="grp"><a class="it" href="#reviews" style="min-height:48px">'+ic('compl')+'<span style="flex:1">Новые отзывы</span><span class="d"><span id="rvn">'+(A.badges.reviews_new||0)+'</span> ›</span></a>'+
+    '<a class="it" href="#dirs" style="min-height:48px">'+ic('dir')+'<span style="flex:1">Справочники</span><span class="d">›</span></a>'+
+    '<a class="it" href="#settings" style="min-height:48px">'+ic('set')+'<span style="flex:1">Настройки</span><span class="d">›</span></a>'+
     LATER.map(function(n){ return '<div class="it" style="min-height:48px;color:var(--mu)">'+ic(n[1])+'<span style="flex:1">'+n[0]+'</span><span class="chip gry">'+n[2]+'</span></div>'; }).join('')+'</div>'+
     '<span class="lbl">Оформление</span>'+themeSeg('')+
     '<div class="grp"><a class="it" href="../" target="_blank" rel="noopener" style="min-height:48px"><span style="flex:1">Открыть приложение</span><span class="d">›</span></a>'+

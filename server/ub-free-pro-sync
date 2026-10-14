@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# Уустары бул — дата бесплатного Про в готовом сайте совпадает с базой.
+# Запускается таймером ub-free-pro-sync.timer раз в 5 минут (ставит deploy.sh).
+# Если в управлении продлили бесплатный Про, меняет в /opt/ub/site одну строку в index.html
+# (var FREE_PRO_BUILT) и дату в оферте (docs/offer.html, <span data-free-pro>). Больше ничего не трогает.
+# Строку не нашёл — ничего не меняет (тогда дату поправит следующая выкладка).
+import os, re, subprocess, sys, tempfile, datetime as dt
+
+SITE = '/opt/ub/site'
+MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+
+def db_date():
+    out = subprocess.run(['docker', 'exec', 'supabase-db', 'psql', '-X', '-At', '-U', 'postgres', '-d', 'postgres', '-c',
+                          "select coalesce(to_json(free_pro_until)#>>'{}', '') from public.app_settings limit 1"],
+                         capture_output=True, text=True, timeout=30)
+    if out.returncode != 0:
+        sys.exit('база не ответила: ' + out.stderr.strip()[:200])
+    v = out.stdout.strip()
+    if v and not re.fullmatch(r'[0-9T:.+\-]+', v):
+        sys.exit('странная дата из базы')
+    return v
+
+def write_atomic(path, text):
+    st = os.stat(path)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix='.ub-sync-')
+    with os.fdopen(fd, 'w', encoding='utf8') as f:
+        f.write(text)
+    os.chmod(tmp, st.st_mode & 0o777)
+    os.chown(tmp, st.st_uid, st.st_gid)
+    os.replace(tmp, path)
+
+def main():
+    iso = db_date()
+    if not iso:
+        return
+    changed = []
+    idx = os.path.join(SITE, 'index.html')
+    if os.path.exists(idx):
+        s = open(idx, encoding='utf8').read()
+        new_line = "var FREE_PRO_BUILT = '" + iso + "';"
+        s2, n = re.subn(r"var FREE_PRO_BUILT = (?:'[^']*'|null);", lambda m: new_line, s, count=1)
+        if n == 1 and s2 != s:
+            write_atomic(idx, s2); changed.append('index.html')
+    offer = os.path.join(SITE, 'docs', 'offer.html')
+    if os.path.exists(offer):
+        d = dt.datetime.fromisoformat(iso).astimezone(dt.timezone(dt.timedelta(hours=9)))  # Якутск
+        ru = '%d %s %d' % (d.day, MONTHS[d.month - 1], d.year)
+        s = open(offer, encoding='utf8').read()
+        s2, n = re.subn(r'<span data-free-pro>[^<]*</span>', '<span data-free-pro>' + ru + '</span>', s)
+        if n >= 1 and s2 != s:
+            write_atomic(offer, s2); changed.append('docs/offer.html')
+    if changed:
+        print('дата бесплатного Про ' + iso + ': обновлены ' + ', '.join(changed))
+
+if __name__ == '__main__':
+    main()

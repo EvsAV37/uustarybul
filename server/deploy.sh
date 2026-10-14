@@ -26,9 +26,15 @@ step "1. Настройки сервера"
 recreate=0; caddy=0
 if ! cmp -s "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; then cp "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; recreate=1; echo "обновлён docker-compose.ub.yml"; fi
 if ! cmp -s "$REL/server/Caddyfile" ub/Caddyfile; then cp "$REL/server/Caddyfile" ub/Caddyfile; caddy=1; echo "обновлён Caddyfile"; fi
-for t in ub-run ub-secret; do
+for t in ub-run ub-secret ub-free-pro-sync; do
   cmp -s "$REL/server/$t" "/usr/local/sbin/$t" || { install -m 755 "$REL/server/$t" "/usr/local/sbin/$t"; echo "обновлён $t"; }
 done
+# таймер: дата бесплатного Про в сайте = дата в базе (раз в 5 минут)
+units=0
+for u in ub-free-pro-sync.service ub-free-pro-sync.timer; do
+  cmp -s "$REL/server/$u" "/etc/systemd/system/$u" || { install -m 644 "$REL/server/$u" "/etc/systemd/system/$u"; units=1; echo "обновлён $u"; }
+done
+if [ $units = 1 ]; then systemctl daemon-reload && systemctl enable -q --now ub-free-pro-sync.timer || bad "таймер ub-free-pro-sync не включился"; fi
 # адреса из server/site.env
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*$|$1=$2|" .env; else printf '%s=%s\n' "$1" "$2" >> .env; fi; }
 SITE=$(grep '^SITE_DOMAIN=' "$REL/server/site.env" | cut -d= -f2-)
@@ -108,6 +114,7 @@ if [ $FAIL = 1 ]; then
   docker compose logs caddy --since 30m --no-log-prefix 2>&1 | grep -iE 'certificate|obtain|acme|error|tls' | tail -8 | cut -c1-400
   echo "-- снаружи: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL/" 2>&1)"
 fi
+systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
 free -m | awk '/Mem/{printf "память: занято %s из %s МБ\n",$3,$2}'
 df -h / | awk 'NR==2{printf "диск: занято %s из %s\n",$3,$2}'
 
