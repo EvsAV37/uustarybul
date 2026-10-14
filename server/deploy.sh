@@ -46,7 +46,7 @@ step "2. Функции"
 fchanged=0
 for d in "$REL"/supabase/functions/*/; do
   n=$(basename "$d"); [ "$n" = main ] && continue
-  out=$(rsync -a --delete -i "$d" "volumes/functions/$n/")
+  out=$(rsync -a -c --delete -i "$d" "volumes/functions/$n/" | grep -v "^\.d")
   [ -n "$out" ] && { fchanged=1; echo "обновлена $n"; }
 done
 if [ $fchanged = 1 ]; then docker compose restart functions >/dev/null 2>&1 || bad "функции не перезапустились"; else echo "без изменений"; fi
