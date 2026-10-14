@@ -72,7 +72,7 @@ else echo "нет"; fi
 step "5. Сайт"
 if ( cd "$REL" && UB_SB_KEY="$ANON" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
   rsync -a --delete \
-    --include=/index.html --include=/manifest.webmanifest --include=/sw.js --include='/*.png' \
+    --include=/index.html --include=/manifest.webmanifest --include=/sw.js \
     --include=/icons/ --include='/icons/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
     --exclude='*' "$REL/" "$UB/site/"
   echo "выложен ($(du -sh "$UB/site" | cut -f1))"
