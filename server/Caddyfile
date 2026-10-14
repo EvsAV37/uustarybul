@@ -1,5 +1,6 @@
 # Уустары бул — Caddy: HTTPS (Let's Encrypt, сам продлевает), сайт и API на одном адресе.
-# PROXY_DOMAIN — адреса сайта через запятую, STUDIO_DOMAIN — адрес панели Supabase (с портом 8443).
+# PROXY_DOMAIN — адрес сайта, REDIRECT_DOMAINS — адреса, перенаправляемые на него, STUDIO_DOMAIN — панель Supabase (:8443).
+# Всё задаётся в server/site.env.
 
 {$PROXY_DOMAIN} {
 	encode zstd gzip
@@ -31,4 +32,9 @@
 	}
 	reverse_proxy studio:3000
 	header -server
+}
+
+# Другие адреса (www, технический адрес FirstVDS) — на основной
+{$REDIRECT_DOMAINS} {
+	redir https://{$PROXY_DOMAIN}{uri} permanent
 }

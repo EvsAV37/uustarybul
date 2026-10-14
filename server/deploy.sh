@@ -29,6 +29,16 @@ if ! cmp -s "$REL/server/Caddyfile" ub/Caddyfile; then cp "$REL/server/Caddyfile
 for t in ub-run ub-secret; do
   cmp -s "$REL/server/$t" "/usr/local/sbin/$t" || { install -m 755 "$REL/server/$t" "/usr/local/sbin/$t"; echo "обновлён $t"; }
 done
+# адреса из server/site.env
+set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*$|$1=$2|" .env; else printf '%s=%s\n' "$1" "$2" >> .env; fi; }
+SITE=$(grep '^SITE_DOMAIN=' "$REL/server/site.env" | cut -d= -f2-)
+REDIR=$(grep '^REDIRECT_DOMAINS=' "$REL/server/site.env" | cut -d= -f2-)
+if [ -n "$SITE" ] && { [ "$(grep '^PROXY_DOMAIN=' .env | cut -d= -f2-)" != "$SITE" ] || [ "$(grep '^REDIRECT_DOMAINS=' .env | cut -d= -f2-)" != "$REDIR" ]; }; then
+  set_env PROXY_DOMAIN "$SITE"; set_env REDIRECT_DOMAINS "$REDIR"; set_env STUDIO_DOMAIN "$SITE:8443"
+  set_env SUPABASE_PUBLIC_URL "https://$SITE"; set_env API_EXTERNAL_URL "https://$SITE/auth/v1"; set_env SITE_URL "https://$SITE"
+  recreate=1; echo "адрес сайта: $SITE (перенаправляются: $REDIR)"
+fi
+URL=$(grep '^SUPABASE_PUBLIC_URL=' .env | cut -d= -f2-)
 if [ $recreate = 1 ]; then docker compose up -d --wait --wait-timeout 300 >/dev/null 2>&1 || bad "docker compose up не прошёл"; fi
 if [ $caddy = 1 ] && [ $recreate = 0 ]; then docker compose restart caddy >/dev/null 2>&1 || bad "caddy не перезапустился"; fi
 
