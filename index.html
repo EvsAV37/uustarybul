@@ -2009,11 +2009,16 @@ setTimeout(hideSplash, 3500);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
-  if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
+  var dd = /[?&]doc=(terms|privacy|consents|offer)\b/.exec(location.search);
+  if(dd){ try{ history.replaceState(null, '', location.pathname); }catch(e){} setTimeout(function(){ openDoc(dd[1]); }, 0); }
+  else if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
   else if(mm){ view = {name:'profile', id:mm[1].toLowerCase(), from:'Главная'}; S.stack = [{name:'home'}]; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
 })();
 if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function(e){
-  if(e.data && e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
+  if(!e.data) return;
+  if(e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
+  else if(e.data.go==='home'){ closeSheet(); S.stack=[]; go({name:'home'}, false); }
+  else if(/^(terms|privacy|consents|offer)$/.test(e.data.doc||'')) openDoc(e.data.doc);
 });
 render();
 loadBase().then(render).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; }).then(hideSplash);

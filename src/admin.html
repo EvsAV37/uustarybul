@@ -189,6 +189,14 @@ select.in{appearance:none;-webkit-appearance:none;padding-right:34px;background-
 .jl .it{min-height:48px}
 .tm{width:52px;flex:none}
 .pdk{font-weight:600}
+#b_topic{display:flex}#b_topic button{flex:1;white-space:normal;height:auto;min-height:36px;padding:6px 10px;line-height:1.2}
+.chk{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.4;cursor:pointer}
+.chk input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--okt)}
+.pnote{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:12px 14px;box-shadow:var(--sh)}
+.pnote b{display:block;font-size:15px;overflow-wrap:anywhere}
+.pnote #pv_b{font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.pmeta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mu);margin-bottom:2px}
+.pic{width:38px;height:38px;border-radius:9px;flex:none;background:#1A1B1F url(../icons/icon-192.png) center/cover no-repeat}
 textarea.in{height:auto;min-height:96px;padding:12px 14px;resize:vertical;line-height:1.45}
 
 /* Окна */
@@ -357,7 +365,11 @@ var ERR = { not_found:'Не найдено', bad_action:'Недопустимо�
   pd_kind:'Выберите, что просят', pd_channel:'Выберите, откуда пришёл запрос', pd_date:'Дата получения — не позже сегодня и не раньше чем год назад',
   pd_long:'Слишком длинный текст', pd_phone:'Номер: 10 цифр после +7', pd_who:'Укажите номер или как ответить заявителю',
   pd_done:'Запрос уже выполнен', pd_no_extend:'Этот срок продлить нельзя', pd_extended:'Срок уже продлевали', pd_overdue:'Срок уже прошёл — продлевать поздно',
-  pd_note:'Коротко напишите, что ответили или сделали' };
+  pd_note:'Коротко напишите, что ответили или сделали',
+  broadcast_topic:'Выберите, о чём сообщение', broadcast_go:'Выберите, что откроется по нажатию', broadcast_city:'Такого города нет', broadcast_category:'Такой сферы нет',
+  broadcast_title:'Заголовок — от 3 до 40 символов', broadcast_body:'Текст — от 5 до 120 символов', broadcast_link:'Без ссылок: по нажатию и так откроется приложение',
+  broadcast_phone:'Без номеров телефонов', broadcast_no_ads:'Подтвердите, что в сообщении нет рекламы', broadcast_quota:'Не больше 2 рассылок за 7 дней',
+  broadcast_nobody:'Некому отправить: у выбранных мастеров не включены уведомления' };
 
 /* ---------- вход: номер → код → пароль ---------- */
 function gate(inner){ $('app').innerHTML = '<div class="gate"><div class="gbox"><div class="brand"><span class="logo" aria-hidden="true"></span>Уустары бул · Управление</div>'+inner+'</div></div>'; }
@@ -488,8 +500,8 @@ function boot(){
 }
 
 /* ---------- оболочка ---------- */
-var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['settings','Настройки','set'],['security','Защита и журналы','shield']];
-var LATER = [['Рассылка','bell','скоро'],['Платежи','card','с 2027']];
+var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['broadcast','Рассылка','bell'],['settings','Настройки','set'],['security','Защита и журналы','shield']];
+var LATER = [['Платежи','card','с 2027']];
 function citySelect(id){
   return '<label class="citysel"><span class="d" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Город</span><select id="'+id+'" aria-label="Город">'+
     '<option value="">Все города</option>'+A.cities.map(function(c){ return '<option value="'+c.id+'"'+(A.city===c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>';
@@ -506,7 +518,7 @@ function shell(sec, html){
     '</nav><div class="foot">'+themeSeg('sm')+
     '<span><b style="color:var(--fg)">'+esc(A.me.phone||'')+'</b> · '+(A.me.role==='owner'?'владелец':'модератор')+'</span>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap"><a href="../" target="_blank" rel="noopener" style="font-weight:600">Открыть приложение ›</a><button type="button" class="link" data-act="pw" style="font-weight:500;color:var(--mu)">Пароль</button><button type="button" class="link" data-act="lock" style="font-weight:500;color:var(--mu)">Выйти</button></div></div></aside>';
-  var tsec = sec==='dirs'||sec==='settings'||sec==='security' ? 'more' : sec;
+  var tsec = sec==='dirs'||sec==='settings'||sec==='security'||sec==='broadcast' ? 'more' : sec;
   var tabs = '<nav class="tabs" aria-label="Разделы">'+[['overview','Обзор','over'],['complaints','Жалобы','compl'],['masters','Мастера','masters'],['more','Ещё','more']].map(function(n){
     var dot = n[0]==='complaints' && b.complaints ? '<span class="dot">'+b.complaints+'</span>' : n[0]==='more' && b.pd_urgent ? '<span class="dot">'+b.pd_urgent+'</span>' : '';
     return '<a href="#'+n[0]+'" class="'+(tsec===n[0]?'on':'')+'"'+(tsec===n[0]?' aria-current="page"':'')+'>'+ic(n[2],24)+n[1]+dot+'</a>'; }).join('')+'</nav>';
@@ -515,7 +527,7 @@ function shell(sec, html){
 }
 function setCity(v){
   var go = function(){ A.dirty=false; A.city = v==='' ? null : Number(v); store('ub_admin_city', A.city==null ? null : String(A.city)); A.cache={}; A.dirs=null; route(); };
-  if(A.dirty) return confirmBox('Выйти без сохранения?', 'Изменения в справочнике пропадут.', 'Выйти', true, go);
+  if(A.dirty) return confirmBox('Выйти без сохранения?', 'Несохранённые изменения пропадут.', 'Выйти', true, go);
   go();
 }
 function ptop(title, back, over){
@@ -604,6 +616,7 @@ function route(){
   if(sec==='more') return pageMore();
   if(sec==='dirs') return pageDirs(h[1]||null, h[2]||null);
   if(sec==='settings') return pageSettings();
+  if(sec==='broadcast') return pageBroadcast();
   if(sec==='security') return h[1]==='pd' ? pagePd(h[2]||null) : pageSecurity();
   return pageOverview();
 }
@@ -614,7 +627,7 @@ window.addEventListener('hashchange', function(){
   if(skipHash){ skipHash=false; lastHash=location.hash; return; }
   if(A.dirty){
     var to = location.hash; skipHash = true; location.hash = lastHash;
-    confirmBox('Выйти без сохранения?', 'Изменения в справочнике пропадут.', 'Выйти', true, function(){ A.dirty=false; location.hash = to; });
+    confirmBox('Выйти без сохранения?', 'Несохранённые изменения пропадут.', 'Выйти', true, function(){ A.dirty=false; location.hash = to; });
     return;
   }
   lastHash = location.hash; route();
@@ -1187,7 +1200,7 @@ var ACT = { unlock:'Вошёл в управление', unlock_failed:'Неве
   complaint_rejected:'Отклонил одну жалобу', review_hide:'Скрыл отзыв', review_show:'Вернул отзыв', phone_view:'Посмотрел номер',
   category_create:'Добавил сферу «{n}»', category_update:'Изменил сферу «{n}»', city_create:'Добавил город «{n}»', city_update:'Изменил город «{n}»',
   free_pro_set:'Продлил бесплатный Про', pd_create:'Записал запрос по ПДн', pd_update:'Изменил запрос по ПДн',
-  pd_extend:'Продлил срок запроса по ПДн', pd_close:'Выполнил запрос по ПДн' };
+  pd_extend:'Продлил срок запроса по ПДн', pd_close:'Выполнил запрос по ПДн', broadcast_send:'Отправил рассылку «{t}»' };
 var FLD = { name:'название', name_plural:'мн. число', short_name:'коротко', grp:'группа', sort:'порядок', on_home:'на главной', is_active:'показывать',
   keywords:'слова', hint_service:'пример услуги', hint_unit:'единица', hint_query:'пример запроса', region:'регион', tz:'часовой пояс' };
 var JT = [['logins','Вход по звонку','Вход'],['actions','Действия админов','Админы'],['phones','Просмотры номеров','Номера']];
@@ -1205,6 +1218,7 @@ function actText(x){
   if(x.action==='free_pro_set' && d.new) t += ' до '+dmy(d.new);
   if(x.action==='review_hide' && d.reason) t += ' — '+(d.reason==='insult'?'оскорбление':'спам');
   if(/^pd_/.test(x.action) && d.kind) t += ': '+(PDK[d.kind]||d.kind)+(d.due_on && x.action!=='pd_close' ? ', срок '+dmd(d.due_on) : '')+(d.late?' (позже срока)':'');
+  if(x.action==='broadcast_send' && d.devices!=null) t += ' · '+d.devices+' '+plural(d.devices,'мастеру','мастерам','мастерам');
   if(d.complaints) t += ' · '+d.complaints+' '+plural(d.complaints,'жалоба','жалобы','жалоб');
   var ch = d.changes ? Object.keys(d.changes).map(function(k){ var v=d.changes[k]; var f=function(z){ return z===true?'да':z===false?'нет':z==null||z===''?'—':String(z); };
     return (FLD[k]||k)+': '+f(v[0])+' → '+f(v[1]); }).join('; ') : '';
@@ -1388,6 +1402,128 @@ function pdForm(r){
     });
 }
 
+/* ---------- Рассылка (только служебные сообщения) ---------- */
+// Реклама по push — только с предварительного согласия (ст. 18 закона «О рекламе»), поэтому здесь — только служебное.
+var BT = [['service','Работа сервиса','Обновления, перерывы в работе, новые города и сферы'],['docs','Документы','Изменения Соглашения, Политики, оферты'],['account','Аккаунт и карточки','Что поменялось в кабинете, сроках и лимитах']];
+var BGO = [['cab','Кабинет'],['home','Главная'],['doc:terms','Пользовательское соглашение'],['doc:privacy','Политика обработки ПДн'],['doc:consents','Согласия'],['doc:offer','Оферта на Про']];
+var PROMO = /скидк|акци[яиюей]|распродаж|промокод|купи|купон|выгодн|подар|розыгрыш|бонус|кэшбэк|кешбэк|партн[её]р/i;
+function bTopic(k){ var t = BT.filter(function(x){ return x[0]===k; })[0]; return t ? t[1] : k; }
+function bAudience(x){ return (x.city ? x.city : 'Все города')+' · '+(x.category ? x.category : 'все сферы'); }
+function pageBroadcast(){
+  A.dirty = false;
+  var ro = !isOwner();
+  var B = A.bc = { topic:'service', city:A.city, cat:null, title:'', body:'', go:'cab', noads:false, prev:null, seq:0 };
+  shell('broadcast', ptop('Рассылка', '#more')+
+    '<div class="dhead"><h1 class="h1">Рассылка</h1><div class="sub">Push мастерам с включёнными уведомлениями · только служебные сообщения, без рекламы</div></div>'+
+    '<div id="bbody"><div class="skel" style="height:420px"></div></div>');
+  var v = location.hash;
+  Promise.all([A.dirs ? Promise.resolve(A.dirs) : loadDirs(), rpc('admin_broadcast_list', {p_limit:20})]).then(function(r){
+    if(location.hash!==v) return;
+    var d = r[0], hist = r[1]||{}, dis = ro ? ' disabled' : '';
+    var cats = d.categories.filter(function(c){ return c.is_active; }), grp = null, catOpts = '<option value="">Все сферы</option>';
+    cats.forEach(function(c){ if(c.grp!==grp){ if(grp!==null) catOpts += '</optgroup>'; grp = c.grp; catOpts += '<optgroup label="'+esc(grp||'Без группы')+'">'; } catOpts += '<option value="'+c.id+'">'+esc(c.name)+'</option>'; });
+    if(grp!==null) catOpts += '</optgroup>';
+    $('bbody').innerHTML =
+      '<div class="cards2">'+
+      '<section class="card" aria-label="Сообщение"><h2 class="h2">Сообщение</h2>'+
+        '<div class="fl"><span>О чём</span><div class="seg" id="b_topic" role="group" aria-label="О чём сообщение">'+BT.map(function(t){ return '<button type="button" data-t="'+t[0]+'" class="'+(t[0]===B.topic?'on':'')+'" aria-pressed="'+(t[0]===B.topic)+'"'+dis+'>'+t[1]+'</button>'; }).join('')+'</div><span class="d" id="b_th"></span></div>'+
+        '<div class="g3"><label class="fl"><span>Город</span><select class="in" id="b_city"'+dis+'><option value="">Все города</option>'+A.cities.map(function(c){ return '<option value="'+c.id+'"'+(B.city===c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+'</select></label>'+
+          '<label class="fl wide" style="grid-column:span 2"><span>Сфера <small>— мастера, у которых есть такое направление</small></span><select class="in" id="b_cat"'+dis+'>'+catOpts+'</select></label></div>'+
+        '<label class="fl"><span>Заголовок <small id="b_tc">0 / 40</small></span><input class="in" id="b_title" maxlength="40" autocomplete="off" placeholder="Например, Обновили Соглашение"'+dis+'></label>'+
+        '<label class="fl"><span>Текст <small id="b_bc">0 / 120</small></span><textarea class="in" id="b_body" maxlength="120" rows="3" placeholder="Коротко: что изменилось и что делать мастеру"'+dis+'></textarea></label>'+
+        '<label class="fl"><span>По нажатию открывается</span><select class="in" id="b_go"'+dis+'>'+BGO.map(function(g){ return '<option value="'+g[0]+'">'+esc(g[1])+'</option>'; }).join('')+'</select></label>'+
+        '<div class="note" id="b_promo" hidden>Похоже на рекламу. В рассылке — только служебное: без скидок, акций, подарков, чужих товаров и призывов купить Про.</div>'+
+        (ro ? '<div class="note">Отправлять может только владелец.</div>' :
+        '<label class="chk"><input type="checkbox" id="b_noads"><span>Здесь нет рекламы: скидок, акций, чужих товаров, призывов купить или подключить Про</span></label>')+
+      '</section>'+
+      '<section class="card" aria-label="Предпросмотр и отправка"><h2 class="h2">Как увидит мастер</h2>'+
+        '<div class="pnote" aria-live="polite"><span class="pic" aria-hidden="true"></span><div style="min-width:0;flex:1"><div class="pmeta"><span>Уустары бул</span><span>сейчас</span></div><b id="pv_t">Заголовок</b><div id="pv_b">Текст уведомления</div></div></div>'+
+        '<div class="rows" id="b_info"><div class="skel" style="height:96px"></div></div>'+
+        (ro ? '' : '<button type="button" class="btn pr big" id="b_send" disabled>Отправить</button>')+
+        '<div class="d" style="line-height:1.5">Уходит только мастерам, у которых на телефоне включены уведомления. У кого сейчас тихие часы — получат, когда они закончатся. Отменить после отправки нельзя. Не больше 2 рассылок за 7 дней.</div>'+
+      '</section></div>'+
+      '<section class="card" style="margin-top:16px" aria-label="История рассылок"><h2 class="h2">История</h2><div class="rows" id="b_hist"></div></section>';
+    renderBHist(hist.items||[]);
+    function th(){ var t = BT.filter(function(x){ return x[0]===B.topic; })[0]; $('b_th').textContent = t[2]; }
+    th();
+    document.querySelectorAll('#b_topic button').forEach(function(b){ b.onclick = function(){
+      B.topic = b.getAttribute('data-t');
+      document.querySelectorAll('#b_topic button').forEach(function(x){ var on = x===b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+      if(B.topic==='docs' && B.go==='cab'){ B.go='doc:terms'; $('b_go').value='doc:terms'; }
+      else if(B.topic!=='docs' && /^doc:/.test(B.go)){ B.go='cab'; $('b_go').value='cab'; }
+      th(); paint(); }; });
+    $('b_city').onchange = function(){ B.city = this.value==='' ? null : Number(this.value); count(); };
+    $('b_cat').onchange = function(){ B.cat = this.value==='' ? null : Number(this.value); count(); };
+    $('b_go').onchange = function(){ B.go = this.value; };
+    $('b_title').oninput = function(){ B.title = this.value; paint(); };
+    $('b_body').oninput = function(){ B.body = this.value; paint(); };
+    var na = $('b_noads'); if(na) na.onchange = function(){ B.noads = na.checked; paint(); };
+    var sendB = $('b_send'); if(sendB) sendB.onclick = send;
+    count();
+  }).catch(function(err){ $('bbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+
+  function clean(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
+  function paint(){
+    var t = clean(B.title), b = clean(B.body);
+    $('pv_t').textContent = t || 'Заголовок'; $('pv_b').textContent = b || 'Текст уведомления';
+    $('pv_t').style.opacity = t ? 1 : .45; $('pv_b').style.opacity = b ? 1 : .45;
+    $('b_tc').textContent = t.length+' / 40'; $('b_bc').textContent = b.length+' / 120';
+    $('b_promo').hidden = !PROMO.test(t+' '+b);
+    A.dirty = !!(t || b);
+    var sb2 = $('b_send'); if(!sb2) return;
+    var p = B.prev, q = p && p.quota || {};
+    var ok = t.length>=3 && b.length>=5 && B.noads && p && p.devices>0 && Number(q.left)>0;
+    sb2.disabled = !ok;
+    sb2.textContent = p && p.devices>0 ? 'Отправить '+num(p.devices)+' '+plural(p.devices,'мастеру','мастерам','мастерам') : 'Отправить';
+  }
+  function count(){
+    var my = ++B.seq; $('b_info').innerHTML = '<div class="skel" style="height:96px"></div>';
+    rpc('admin_broadcast_preview', {p:{topic:B.topic, city_id:B.city, category_id:B.cat}}).then(function(p){
+      if(my!==B.seq) return; B.prev = p;
+      var q = p.quota||{}, left = Number(q.left);
+      $('b_info').innerHTML =
+        '<div class="row"><span style="flex:1">Мастеров в выборке</span><b>'+num(p.recipients)+'</b></div>'+
+        '<div class="row"><span style="flex:1">Получат — уведомления включены</span><b>'+num(p.devices)+'</b></div>'+
+        (p.quiet_now ? '<div class="row"><span style="flex:1">Из них сейчас тихие часы</span><span class="d">'+num(p.quiet_now)+' · получат позже</span></div>' : '')+
+        '<div class="row"><span style="flex:1">Можно отправить за 7 дней</span>'+(left>0 ? '<span class="chip grn">ещё '+left+'</span>' : '<span class="chip yel">следующая — '+esc(dmFull(q.next_at))+', '+hm(q.next_at)+'</span>')+'</div>';
+      paint();
+    }, function(err){ if(my===B.seq) $('b_info').innerHTML = '<div class="empty">'+esc(err.message)+'</div>'; });
+  }
+  function send(){
+    var p = B.prev; if(!p) return;
+    var t = clean(B.title), b = clean(B.body);
+    confirmBox('Отправить '+num(p.devices)+' '+plural(p.devices,'мастеру','мастерам','мастерам')+'?', '«'+t+'» — '+bAudience({city:B.city!=null && cityById(B.city), category:B.cat!=null && catById(B.cat)})+'. Отменить после отправки нельзя.', 'Отправить', false, function(){
+      var btn = $('b_send'); if(btn) btn.disabled = true;
+      rpc('admin_broadcast_send', {p:{topic:B.topic, title:t, body:b, go:B.go, city_id:B.city, category_id:B.cat, no_ads:B.noads}}).then(function(r){
+        A.dirty = false;
+        toast('Отправлено: '+num(r.devices)+' '+plural(r.devices,'мастеру','мастерам','мастерам'));
+        pageBroadcast();
+      }, function(err){ if(btn) btn.disabled = false; toast(err.message); });
+    });
+  }
+  function cityById(id){ var c = A.cities.filter(function(x){ return x.id===id; })[0]; return c ? c.name : ''; }
+  function catById(id){ var c = (A.dirs && A.dirs.categories || []).filter(function(x){ return x.id===id; })[0]; return c ? c.name : ''; }
+}
+function renderBHist(items){
+  var el = $('b_hist'); if(!el) return;
+  if(!items.length){ el.innerHTML = '<div class="empty">Рассылок ещё не было</div>'; return; }
+  el.innerHTML = items.map(function(x){
+    var st = [];
+    if(x.sent) st.push('доставлено '+num(x.sent));
+    if(x.waiting) st.push('ждёт '+num(x.waiting));
+    if(x.failed) st.push('не доставлено '+num(x.failed));
+    if(x.no_device) st.push('телефон отключён '+num(x.no_device));
+    if(x.off) st.push('аккаунт удаляется '+num(x.off));
+    if(x.stale) st.push('устарело '+num(x.stale));
+    if(!x.total && x.devices) st.push('итоги уже очищены');
+    return '<div class="row" style="align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(x.title)+'</div>'+
+      '<div class="d" style="margin-top:2px;line-height:1.45">'+esc(x.body)+'</div>'+
+      '<div class="d" style="margin-top:6px">'+esc(dmFull(x.created_at)+', '+hm(x.created_at)+' · '+bAudience(x)+' · '+num(x.devices)+' '+plural(x.devices,'мастер','мастера','мастеров'))+'</div>'+
+      (st.length ? '<div class="d" style="margin-top:2px">'+esc(st.join(' · '))+'</div>' : '')+
+      '</div><span class="chip gry">'+esc(bTopic(x.topic))+'</span></div>';
+  }).join('');
+}
+
 /* ---------- Ещё (телефон) ---------- */
 function pageMore(){
   if(window.matchMedia('(min-width:900px)').matches){ location.hash='#overview'; return; }
@@ -1395,6 +1531,7 @@ function pageMore(){
     '<div class="grp" style="padding:8px 14px">'+citySelect('city2')+'</div>'+
     '<div class="grp"><a class="it" href="#reviews" style="min-height:48px">'+ic('compl')+'<span style="flex:1">Новые отзывы</span><span class="d"><span id="rvn">'+(A.badges.reviews_new||0)+'</span> ›</span></a>'+
     '<a class="it" href="#dirs" style="min-height:48px">'+ic('dir')+'<span style="flex:1">Справочники</span><span class="d">›</span></a>'+
+    '<a class="it" href="#broadcast" style="min-height:48px">'+ic('bell')+'<span style="flex:1">Рассылка</span><span class="d">›</span></a>'+
     '<a class="it" href="#settings" style="min-height:48px">'+ic('set')+'<span style="flex:1">Настройки</span><span class="d">›</span></a>'+
     '<a class="it" href="#security" data-pdu style="min-height:48px">'+ic('shield')+'<span style="flex:1">Защита и журналы</span><span class="d" style="margin-left:8px">›</span></a>'+
     LATER.map(function(n){ return '<div class="it" style="min-height:48px;color:var(--mu)">'+ic(n[1])+'<span style="flex:1">'+n[0]+'</span><span class="chip gry">'+n[2]+'</span></div>'; }).join('')+'</div>'+

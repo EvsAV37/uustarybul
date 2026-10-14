@@ -52,6 +52,16 @@ function day(iso: unknown, tz: string): string {
   } catch { return ''; }
 }
 
+// Куда ведёт нажатие: кабинет (по умолчанию), главная или документ
+const DOC_KEYS = ['terms', 'privacy', 'consents', 'offer'];
+function openUrl(kind: string, p: Record<string, unknown>): string {
+  if (kind !== 'broadcast') return OPEN_URL;
+  const go = String(p.go || 'cab');
+  if (go === 'home') return './';
+  if (go.startsWith('doc:') && DOC_KEYS.includes(go.slice(4))) return './?doc=' + go.slice(4);
+  return OPEN_URL;
+}
+
 function text(kind: string, p: Record<string, unknown>, tz: string): { title: string; body: string } {
   const t = typeof p.title === 'string' && p.title ? `«${p.title}»` : 'карточка';
   switch (kind) {
@@ -83,6 +93,8 @@ function text(kind: string, p: Record<string, unknown>, tz: string): { title: st
         : { title: 'Карточка снова в поиске', body: `Мы проверили жалобы — ${t} снова видна заказчикам.` };
     case 'blocked':
       return { title: 'Профиль заблокирован', body: 'После проверки жалоб профиль скрыт из поиска. Подробности в кабинете.' };
+    case 'broadcast': // рассылка из управления: текст пишет администратор (только служебное)
+      return { title: String(p.title || 'Уустары бул').slice(0, 60), body: String(p.body || '').slice(0, 200) };
     default:
       return { title: 'Уустары бул', body: 'Откройте кабинет, там есть новости.' };
   }
@@ -106,7 +118,8 @@ async function runBatch(v: Vapid) {
   const okS: number[] = [], deadS: number[] = [], badS: number[] = [];
 
   await pool(rows, 10, async (r) => {
-    const msg = { ...text(r.r_kind, r.r_payload || {}, r.r_tz), url: OPEN_URL, tag: `${r.r_kind}-${r.r_nid}` };
+    const msg = { ...text(r.r_kind, r.r_payload || {}, r.r_tz), url: openUrl(r.r_kind, r.r_payload || {}),
+      tag: r.r_kind === 'broadcast' ? `broadcast-${(r.r_payload as any)?.broadcast_id}` : `${r.r_kind}-${r.r_nid}` };
     let st = 0;
     try {
       st = (await sendPush({ endpoint: r.r_endpoint, p256dh: r.r_p256dh, auth: r.r_auth }, msg, v, SUBJECT,

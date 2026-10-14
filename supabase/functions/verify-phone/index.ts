@@ -51,6 +51,21 @@ async function sign(s: string) {
   }
   return hex(await crypto.subtle.sign('HMAC', hmacKey, enc.encode(s)));
 }
+// Код входа в базе не хранится: только HMAC от «номер:код» с ключом сервера.
+let codeKey: CryptoKey | null = null;
+async function codeHash(phone: string, code: string) {
+  if (!codeKey) {
+    const raw = await crypto.subtle.digest('SHA-256', enc.encode('uustarybul-code:' + Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')));
+    codeKey = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  }
+  return 'h1:' + hex(await crypto.subtle.sign('HMAC', codeKey, enc.encode(phone + ':' + code)));
+}
+function sameText(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
 async function newChallenge() {
   const rnd = hex(crypto.getRandomValues(new Uint8Array(12)).buffer);
   const salt = `${rnd}?expires=${Math.floor(Date.now() / 1000) + POW_TTL}`;
@@ -262,7 +277,7 @@ Deno.serve(async (req) => {
         }
       }
       const { error } = await admin.from('phone_verify_codes').upsert({
-        session_key: sessionKey, phone, pincode: String(pincode), attempts: 0, created_at: new Date().toISOString()
+        session_key: sessionKey, phone, pincode: await codeHash(phone, String(pincode).slice(-4)), attempts: 0, created_at: new Date().toISOString()
       });
       if (error) throw new Error('save failed: ' + error.message);
       return json({ ok: true, test: isTest });
@@ -274,9 +289,10 @@ Deno.serve(async (req) => {
       if (code.length !== 4) return fail('Введите 4 цифры');
       const { data: row } = await admin.from('phone_verify_codes').select('*')
         .eq('session_key', sessionKey).eq('phone', phone).maybeSingle();
-      if (!row || Date.now() - new Date(row.created_at).getTime() > 10 * 60 * 1000) return fail('Код устарел. Запросите звонок ещё раз.');
+      // строки без «h1:» — коды, запрошенные до перехода на хеш: считаем устаревшими
+      if (!row || !String(row.pincode).startsWith('h1:') || Date.now() - new Date(row.created_at).getTime() > 10 * 60 * 1000) return fail('Код устарел. Запросите звонок ещё раз.');
       if (row.attempts >= 5) return fail('Слишком много попыток. Запросите звонок ещё раз.');
-      if (String(row.pincode).slice(-4) !== code) {
+      if (!sameText(String(row.pincode), await codeHash(phone, code))) {
         await admin.from('phone_verify_codes').update({ attempts: row.attempts + 1 }).eq('session_key', sessionKey);
         await noteResult(phone, 'wrong');
         const left = 4 - row.attempts;
