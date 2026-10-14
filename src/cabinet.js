@@ -4,11 +4,22 @@ function dmy(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()];
 function dmyY(iso){ return dmy(iso)+' '+new Date(iso).getFullYear(); }
 // Про бесплатно для всех мастеров до даты из app_settings (решено 13.10.2026); '' — бесплатный период закончился
 var FREE_PRO = null;
+// Дата из прошлого запуска — чтобы сразу показать верный текст, без мелькания старого
+function freeProNow(){
+  if(FREE_PRO!==null) return FREE_PRO;
+  var c = store('ub_free_pro');
+  return c && new Date(c) > new Date() ? c : (c===null ? null : '');
+}
+function proPitch(f){
+  return f ? 'Сейчас Про бесплатно для всех мастеров до '+dmyY(f)+': до 5 направлений, в каждом услуги без лимита и до 30 фото, статистика просмотров и звонков.'
+           : 'Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.';
+}
 function loadFreePro(){
   if(FREE_PRO!==null) return Promise.resolve(FREE_PRO);
   return sb.from('app_settings').select('free_pro_until').maybeSingle().then(function(r){
     var d = r.data && r.data.free_pro_until;
     FREE_PRO = d && new Date(d) > new Date() ? d : '';
+    store('ub_free_pro', FREE_PRO);
     return FREE_PRO;
   }, function(){ return ''; });
 }
@@ -103,12 +114,12 @@ function cabView(){
   if(!isRegistered()){
     app.innerHTML = cabHead()+''+
       '<div class="card"><div style="font-size:20px;font-weight:700;margin-bottom:8px">Станьте мастером на Уустары бул</div>'+
-      '<div class="muted" style="font-size:15px;line-height:1.5" id="proTxt">Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото. Новым мастерам 3 месяца Про бесплатно: до 5 направлений, услуги без лимита, до 30 фото, статистика.</div></div>'+
+      '<div class="muted" style="font-size:15px;line-height:1.5" id="proTxt">'+(freeProNow()===null ? 'Бесплатно: 2 направления, в каждом до 5 услуг и 10 фото.' : proPitch(freeProNow()))+'</div></div>'+
       '<button type="button" class="btn pr" id="lg">Войти по номеру</button>'+
       '<div class="muted" style="font-size:13px;line-height:1.45">Вход нужен и заказчикам — чтобы сохранять мастеров в избранное, оставлять отзывы и жалобы.</div>'+settingsBlock(false);
     document.getElementById('lg').onclick = function(){ loginSheet(function(){ render(); }); };
     bindSettings(null);
-    loadFreePro().then(function(f){ var t=document.getElementById('proTxt'); if(f && t) t.textContent = 'Сейчас Про бесплатно для всех мастеров до '+dmyY(f)+': до 5 направлений, в каждом услуги без лимита и до 30 фото, статистика просмотров и звонков.'; });
+    loadFreePro().then(function(f){ var t=document.getElementById('proTxt'); if(t) t.textContent = proPitch(f); });
     return;
   }
   app.innerHTML = cabHead()+'<div class="skel" style="height:64px"></div><div class="skel" style="height:160px"></div>';

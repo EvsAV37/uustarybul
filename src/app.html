@@ -258,6 +258,7 @@ ol.rules{margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.5;displa
 </head>
 <body>
 <div id="splash" aria-hidden="true"><img src="/*LOGO_MARK*/" alt="" width="480" height="352" decoding="sync"><div class="sp-name">Уустары бул</div></div>
+<script>window.UB_SPLASH_AT = window.performance ? performance.now() : 0;</script>
 <main id="app" class="app" aria-live="polite"></main>
 <nav class="tabs" aria-label="Разделы"><div class="in" id="tabs"></div></nav>
 <div id="toast" class="toast" hidden></div>
@@ -885,16 +886,16 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
-// Заставка: не меньше 2,7 с от открытия (решено 14.10.2026: на своём сервере грузится быстро и заставка проскакивала), не больше 4 с
+// Заставка: знак виден не меньше 2 с с момента появления (решено 14.10.2026; раньше считали от нажатия, и время уходило на загрузку), не дольше 3,5 с
 var splashEl = document.getElementById('splash');
 if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A1B1F');
 function hideSplash(){
   if(!splashEl) return;
   var el = splashEl; splashEl = null;
-  var wait = Math.max(0, 2700 - (window.performance ? performance.now() : 0));
+  var wait = Math.max(0, 2000 - ((window.performance ? performance.now() : 0) - (window.UB_SPLASH_AT || 0)));
   setTimeout(function(){ document.documentElement.classList.remove('sp'); applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 550); }, wait);
 }
-setTimeout(hideSplash, 4000);
+setTimeout(hideSplash, 3500);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
