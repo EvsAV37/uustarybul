@@ -1,0 +1,13 @@
+# Отпечаток схемы облачного Supabase 14.10.2026 (server/fingerprint.sql), без ub_export и push_kick
+bucket   1 a2abad7f069884398cfab67dc21ade28
+col    184 be016fd4ae9450fd348a77ce837604ab
+colgrant 305 a952684f2b92bf48a1880e285dd974a5
+con     87 960b55a6ff5688c704e6a60998617b78
+cron     4 f309fc8c0ae190adb2b0e25f35d0de68
+exec    36 c1bb5e2888e8f8436ac3943134e1d233
+fn      55 407eeeda2d128e2c38ecd710352519f1
+grant  230 fd3d9aeb4843d462a7a4f1ac8d926e54
+idx     55 4387d712c5f1d91326122f6f4dc0b175
+pol     44 625af7930a5465590befeb640502aa2b
+trg     23 2206b13619ae73dd9eda080f5203273f
+type     8 5f96e6f68d958ae07ab028396105decb

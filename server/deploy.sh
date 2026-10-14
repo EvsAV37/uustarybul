@@ -18,6 +18,7 @@ cd "$SB" || { echo "нет $SB"; exit 1; }
 URL=$(grep '^SUPABASE_PUBLIC_URL=' .env | cut -d= -f2-)
 ANON=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
 psql_db() { docker exec -i supabase-db psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres "$@"; }
+psql_su() { docker exec -i supabase-db psql -X -q -v ON_ERROR_STOP=1 -h localhost -U supabase_admin -d postgres "$@"; }
 
 printf 'версия %s · %s\n' "${UB_SHA:0:7}" "$(date '+%Y-%m-%d %H:%M %Z')"
 
@@ -48,7 +49,8 @@ for f in "$REL"/server/db/*.sql "$REL"/supabase/migrations/*.sql; do
   [ -f "$f" ] || continue
   key="$(basename "$(dirname "$f")")/$(basename "$f")"
   grep -qxF "$key" <<<"$applied" && continue
-  if out=$( { cat "$f"; printf "\ninsert into ops.migrations(name) values ('%s');\n" "$key"; } | psql_db --single-transaction 2>&1 ); then
+  run=psql_db; head -1 "$f" | grep -q '^-- ub:superuser' && run=psql_su
+  if out=$( { cat "$f"; printf "\ninsert into ops.migrations(name) values ('%s');\n" "$key"; } | $run --single-transaction 2>&1 ); then
     echo "применена $key"; napplied=$((napplied+1))
   else
     bad "ошибка в $key:"; printf '%s\n' "$out" | tail -15; break
