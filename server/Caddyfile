@@ -1,6 +1,6 @@
 # Уустары бул — Caddy: HTTPS (Let's Encrypt, сам продлевает), сайт и API на одном адресе.
 # PROXY_DOMAIN — адрес сайта, REDIRECT_DOMAINS — адреса, перенаправляемые на него, STUDIO_DOMAIN — панель Supabase (:8443).
-# Всё задаётся в server/site.env.
+# Всё задаётся в server/site.env. (перезапуск: 0121)
 
 {$PROXY_DOMAIN} {
 	encode zstd gzip
