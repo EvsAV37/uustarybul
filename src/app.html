@@ -209,7 +209,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .brand{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:36px;display:flex;align-items:center;gap:12px}
 .logo{display:inline-block;flex:none;width:52px;height:38px;background:var(--fg);-webkit-mask:url(icons/logo-mark.webp) center/contain no-repeat;mask:url(icons/logo-mark.webp) center/contain no-repeat}
 /* заставка при запуске (совпадает с картинкой запуска iPhone) */
-#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .35s ease}
+#splash{position:fixed;inset:0;z-index:100;background:#1A1B1F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s ease}
 /* картинка запуска iPhone — ровный фон без знака (иначе при передаче странице мерцает); знак проявляется уже здесь */
 #splash img{width:min(42vw,240px);height:auto;animation:spIn .4s .05s ease-out both}
 #splash .sp-name{color:#fff;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:32px;animation:spUp .45s .25s ease-out both}
@@ -885,16 +885,16 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
-// Заставка: не меньше 1,2 с от открытия (знак и название успевают проявиться), не больше 3 с
+// Заставка: не меньше 2,7 с от открытия (решено 14.10.2026: на своём сервере грузится быстро и заставка проскакивала), не больше 4 с
 var splashEl = document.getElementById('splash');
 if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A1B1F');
 function hideSplash(){
   if(!splashEl) return;
   var el = splashEl; splashEl = null;
-  var wait = Math.max(0, 1200 - (window.performance ? performance.now() : 0));
-  setTimeout(function(){ document.documentElement.classList.remove('sp'); applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 400); }, wait);
+  var wait = Math.max(0, 2700 - (window.performance ? performance.now() : 0));
+  setTimeout(function(){ document.documentElement.classList.remove('sp'); applyTheme(); el.classList.add('out'); setTimeout(function(){ el.remove(); }, 550); }, wait);
 }
-setTimeout(hideSplash, 3000);
+setTimeout(hideSplash, 4000);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
