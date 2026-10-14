@@ -49,6 +49,8 @@ for f in "$REL"/server/db/*.sql "$REL"/supabase/migrations/*.sql; do
   [ -f "$f" ] || continue
   key="$(basename "$(dirname "$f")")/$(basename "$f")"
   grep -qxF "$key" <<<"$applied" && continue
+  # предыдущий файл мог отметить этот как уже применённый
+  [ -n "$(psql_db -At -c "select 1 from ops.migrations where name = '$key'")" ] && continue
   run=psql_db; head -1 "$f" | grep -q '^-- ub:superuser' && run=psql_su
   if out=$( { cat "$f"; printf "\ninsert into ops.migrations(name) values ('%s');\n" "$key"; } | $run --single-transaction 2>&1 ); then
     echo "применена $key"; napplied=$((napplied+1))
@@ -79,12 +81,19 @@ if ( cd "$REL" && UB_SB_KEY="$ANON" UB_VENDOR_DIR="$UB/vendor" python3 build.py 
 else bad "сборка build.py не прошла"; fi
 
 step "6. Проверка"
+for _ in $(seq 1 12); do docker compose ps functions --format '{{.Status}}' | grep -q healthy && break; sleep 5; done
 docker compose ps --format '{{.Service}}: {{.Status}}' | sort
-code() { curl -s -o /dev/null -m 15 -w '%{http_code}' "$@"; }
+HOSTN=${URL#https://}
+code() { curl -s -o /dev/null -m 15 -w '%{http_code}' --resolve "$HOSTN:443:127.0.0.1" "$@"; }
 c=$(code "$URL/");                                              echo "сайт $c";    [ "$c" = 200 ] || bad "сайт не отвечает"
 c=$(code -H "apikey: $ANON" "$URL/rest/v1/cities?select=id&limit=1"); echo "API $c";     [ "$c" = 200 ] || bad "API не отвечает"
 c=$(code "$URL/auth/v1/health" -H "apikey: $ANON");             echo "вход $c";    [ "$c" = 200 ] || bad "сервис входа не отвечает"
 c=$(code -X POST -H 'Content-Type: application/json' -d '{"action":"challenge"}' "$URL/functions/v1/verify-phone"); echo "функции $c"; [ "$c" = 200 ] || bad "функция verify-phone не отвечает"
+if [ $FAIL = 1 ]; then
+  echo "-- caddy (сертификат и ошибки):"
+  docker compose logs caddy --since 30m --no-log-prefix 2>&1 | grep -iE 'certificate|obtain|acme|error|tls' | tail -8 | cut -c1-400
+  echo "-- снаружи: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL/" 2>&1)"
+fi
 free -m | awk '/Mem/{printf "память: занято %s из %s МБ\n",$3,$2}'
 df -h / | awk 'NR==2{printf "диск: занято %s из %s\n",$3,$2}'
 
