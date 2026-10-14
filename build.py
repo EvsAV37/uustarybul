@@ -27,6 +27,13 @@ if SB_KEY:  # свой сервер: API на том же адресе, ключ
     import re as _re
     src, n = _re.subn(r"var SB_KEY = '[^']*';", "var SB_KEY = '" + SB_KEY + "';", src)
     assert n == 1, 'не найден SB_KEY в app.html'
+FREE_PRO = os.environ.get('UB_FREE_PRO', '').strip()  # дата бесплатного Про из базы (deploy.sh)
+if FREE_PRO:
+    import re as _re
+    assert _re.fullmatch(r'[0-9T:.+\-]+', FREE_PRO), 'странная дата UB_FREE_PRO: ' + FREE_PRO
+    old_fp = 'var FREE_PRO_BUILT = null;'
+    assert old_fp in src, 'не найден FREE_PRO_BUILT в cabinet.js'
+    src = src.replace(old_fp, "var FREE_PRO_BUILT = '" + FREE_PRO + "';")
 lib = open(lib_path, encoding='utf8').read()
 # UMD-сборка не умеет работать встроенной в страницу — чиним определение publicPath
 old = 'if(!e)throw new Error("Automatic publicPath is not supported in this browser");'

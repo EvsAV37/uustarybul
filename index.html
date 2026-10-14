@@ -695,10 +695,13 @@ function dmy(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()];
 function dmyY(iso){ return dmy(iso)+' '+new Date(iso).getFullYear(); }
 // Про бесплатно для всех мастеров до даты из app_settings (решено 13.10.2026); '' — бесплатный период закончился
 var FREE_PRO = null;
-// Дата из прошлого запуска — чтобы сразу показать верный текст, без мелькания старого
+// Дата, встроенная при сборке на сервере (из базы) — чтобы верный текст был сразу и при первом открытии
+var FREE_PRO_BUILT = null;
+// Дата из прошлого запуска (свежее встроенной), иначе встроенная — без мелькания старого текста
 function freeProNow(){
   if(FREE_PRO!==null) return FREE_PRO;
   var c = store('ub_free_pro');
+  if(c===null) c = FREE_PRO_BUILT;
   return c && new Date(c) > new Date() ? c : (c===null ? null : '');
 }
 function proPitch(f){

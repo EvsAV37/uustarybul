@@ -82,7 +82,10 @@ if [ -f "$REL/server/run.sql" ]; then
 else echo "нет"; fi
 
 step "5. Сайт"
-if ( cd "$REL" && UB_SB_KEY="$ANON" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
+# дата бесплатного Про — в страницу, чтобы кабинет сразу показывал верный текст (в ISO, как отдаёт API)
+FREE_PRO=$(psql_db -At -c "select coalesce(to_json(free_pro_until)#>>'{}', '') from public.app_settings limit 1" 2>/dev/null || true)
+echo "дата бесплатного Про: ${FREE_PRO:-нет}"
+if ( cd "$REL" && UB_SB_KEY="$ANON" UB_FREE_PRO="$FREE_PRO" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
   rsync -a --delete \
     --include=/index.html --include=/manifest.webmanifest --include=/sw.js \
     --include=/icons/ --include='/icons/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
