@@ -1,6 +1,6 @@
 #!/bin/bash
 # Уустары бул — выкладка версии на сервер. Запускает ub-run (от root) из распакованного архива коммита.
-#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret)
+#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban)
 #   2. серверные функции (supabase/functions/*)
 #   3. миграции базы: server/db/*.sql, затем supabase/migrations/*.sql — каждая один раз (ops.migrations)
 #   4. server/run.sql — разовые запросы/загрузки: выполняется, если файл изменился
@@ -47,6 +47,36 @@ fi
 URL=$(grep '^SUPABASE_PUBLIC_URL=' .env | cut -d= -f2-)
 if [ $recreate = 1 ]; then docker compose up -d --wait --wait-timeout 300 >/dev/null 2>&1 || bad "docker compose up не прошёл"; fi
 if [ $caddy = 1 ] && [ $recreate = 0 ]; then docker compose restart caddy >/dev/null 2>&1 || bad "caddy не перезапустился"; fi
+
+# fail2ban: SSH и панель Supabase :8443 (server/fail2ban). Журнал панели пишет Caddy в /var/log/ub-caddy.
+install -d -m 750 /var/log/ub-caddy; touch /var/log/ub-caddy/studio.log
+if ! command -v fail2ban-client >/dev/null; then
+  export DEBIAN_FRONTEND=noninteractive
+  { apt-get install -y -qq fail2ban python3-systemd || { apt-get update -qq && apt-get install -y -qq fail2ban python3-systemd; }; } >/dev/null 2>&1 \
+    && echo "установлен fail2ban $(fail2ban-client --version 2>/dev/null | head -1)" || bad "fail2ban не установился"
+fi
+f2b=0
+for pair in jail.local:/etc/fail2ban/jail.d/uustarybul.local ub-studio.conf:/etc/fail2ban/filter.d/ub-studio.conf \
+            fail2ban.local:/etc/fail2ban/fail2ban.d/uustarybul.local; do
+  src="$REL/server/fail2ban/${pair%%:*}"; dst="${pair#*:}"
+  [ -f "$src" ] && [ -d "$(dirname "$dst")" ] || continue
+  cmp -s "$src" "$dst" || { install -m 644 "$src" "$dst"; f2b=1; echo "обновлён $(basename "$dst")"; }
+done
+if command -v fail2ban-client >/dev/null && { [ $f2b = 1 ] || ! systemctl is-active -q fail2ban; }; then
+  if fail2ban-client -t >/dev/null 2>&1; then
+    systemctl enable -q fail2ban; systemctl restart fail2ban
+    for _ in $(seq 1 20); do fail2ban-client ping >/dev/null 2>&1 && break; sleep 1; done
+    # самопроверка на адресе из документации (192.0.2.0/24 — в интернете не встречается): бан → правило есть → разбан
+    t=192.0.2.77; ok=1
+    fail2ban-client set sshd banip $t >/dev/null 2>&1 && iptables -w -C f2b-sshd -s $t -j REJECT --reject-with icmp-port-unreachable 2>/dev/null \
+      && iptables -w -C INPUT -p tcp -m multiport --dports ssh -j f2b-sshd 2>/dev/null || ok=0
+    fail2ban-client set sshd unbanip $t >/dev/null 2>&1
+    fail2ban-client set ub-studio banip $t >/dev/null 2>&1 && iptables -w -C f2b-ub-studio -s $t -j REJECT --reject-with icmp-port-unreachable 2>/dev/null \
+      && iptables -w -C DOCKER-USER -p tcp -m multiport --dports 8443 -j f2b-ub-studio 2>/dev/null || ok=0
+    fail2ban-client set ub-studio unbanip $t >/dev/null 2>&1
+    [ $ok = 1 ] && echo "fail2ban: самопроверка бана прошла (SSH — INPUT, панель — DOCKER-USER)" || bad "fail2ban: бан не ставится в iptables"
+  else bad "fail2ban: ошибка в настройках"; fail2ban-client -t 2>&1 | tail -5; fi
+fi
 
 step "2. Функции"
 fchanged=0
@@ -115,6 +145,10 @@ if [ $FAIL = 1 ]; then
   echo "-- снаружи: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL/" 2>&1)"
 fi
 systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
+f2b_n() { fail2ban-client status "$1" 2>/dev/null | sed -n 's/.*Currently banned:[[:space:]]*//p'; }
+if systemctl is-active -q fail2ban && [ -n "$(f2b_n sshd)" ] && [ -n "$(f2b_n ub-studio)" ]; then
+  echo "fail2ban: работает, сейчас заблокировано — SSH $(f2b_n sshd), панель $(f2b_n ub-studio)"
+else bad "fail2ban не работает"; fi
 free -m | awk '/Mem/{printf "память: занято %s из %s МБ\n",$3,$2}'
 df -h / | awk 'NR==2{printf "диск: занято %s из %s\n",$3,$2}'
 

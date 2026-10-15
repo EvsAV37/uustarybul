@@ -49,6 +49,8 @@ services:
       - /opt/ub/site:/srv/site:ro
       - caddy_data:/data
       - caddy_config:/config
+      # журнал панели Supabase (:8443) — его читает fail2ban на сервере
+      - /var/log/ub-caddy:/var/log/caddy
 
 volumes:
   caddy_data:

@@ -1,0 +1,3 @@
+# Уустары бул — помнить баны неделю (для «при повторах дольше» у SSH). Ставит deploy.sh в /etc/fail2ban/fail2ban.d/.
+[DEFAULT]
+dbpurgeage = 7d

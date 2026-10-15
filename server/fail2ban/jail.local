@@ -1,0 +1,34 @@
+# Уустары бул — fail2ban (ставит server/deploy.sh в /etc/fail2ban/jail.d/uustarybul.local).
+# Разблокировать адрес вручную (консоль FirstVDS или SSH с другого адреса):
+#   fail2ban-client set sshd unbanip 1.2.3.4        fail2ban-client set ub-studio unbanip 1.2.3.4
+# Посмотреть: fail2ban-client status sshd · fail2ban-client status ub-studio
+
+[DEFAULT]
+findtime = 10m
+bantime = 1h
+ignoreip = 127.0.0.1/8 ::1
+banaction = iptables-multiport
+banaction_allports = iptables-allports
+
+# SSH: 5 неверных входов за 10 минут → бан на час; при повторах дольше (2, 4, 8 часов…, не больше недели).
+# Выкладка из GitHub входит по ключу — неудач у неё нет, правило её не затрагивает.
+[sshd]
+enabled = true
+backend = systemd
+port = ssh
+maxretry = 5
+bantime.increment = true
+bantime.factor = 1
+bantime.maxtime = 1w
+
+# Панель Supabase (Studio, https://…:8443, пароль в Caddy): 10 неверных паролей за 10 минут → бан на час.
+# Caddy работает в Docker: трафик к нему идёт мимо INPUT, поэтому бан ставится в цепочку DOCKER-USER.
+[ub-studio]
+enabled = true
+backend = polling
+filter = ub-studio
+logpath = /var/log/ub-caddy/studio.log
+port = 8443
+protocol = tcp
+chain = DOCKER-USER
+maxretry = 10

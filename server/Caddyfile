@@ -28,8 +28,17 @@
 	}
 }
 
-# Панель Supabase (Studio) — только по паролю
+# Панель Supabase (Studio) — только по паролю. Журнал — для fail2ban (неверные пароли → бан, server/fail2ban);
+# пароль Caddy в журнал не пишет. Хранится до 3 файлов по 5 МБ, не дольше недели.
 {$STUDIO_DOMAIN} {
+	log {
+		output file /var/log/caddy/studio.log {
+			roll_size 5MiB
+			roll_keep 3
+			roll_keep_for 168h
+		}
+		format json
+	}
 	basic_auth {
 		{$PROXY_AUTH_USERNAME} {$PROXY_AUTH_PASSWORD}
 	}
