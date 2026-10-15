@@ -846,8 +846,22 @@ function needRegistration(text, after){
 }
 function toggleFav(id, v){
   if(!isRegistered()) return needRegistration('Избранное сохраняется в аккаунте, поэтому доступно после входа по номеру телефона.', function(){ toggleFav(id, v); });
-  var q = v.fav ? sb.from('favorites').delete().eq('profile_id',id) : sb.from('favorites').insert({profile_id:id});
-  q.then(function(r){ if(r.error) return toast(errText(r.error)); v.fav=!v.fav; toast(v.fav?'Добавлено в избранное':'Убрано из избранного'); profileView(); });
+  if(v.favBusy) return;
+  // Сердечко меняется сразу, без перезагрузки страницы мастера; если сохранить не вышло — возвращается назад
+  var want = !v.fav; v.favBusy = true; v.fav = want; paintFav(v);
+  var q = want ? sb.from('favorites').insert({profile_id:id}) : sb.from('favorites').delete().eq('profile_id',id);
+  q.then(function(r){
+    v.favBusy = false;
+    if(r.error && !(want && r.error.code==='23505')){ v.fav = !want; paintFav(v); return toast(errText(r.error)); }
+    toast(want?'Добавлено в избранное':'Убрано из избранного');
+  });
+}
+function paintFav(v){
+  var b = document.getElementById('favBtn'); if(!b) return;
+  b.setAttribute('aria-pressed', String(v.fav));
+  b.setAttribute('aria-label', v.fav?'Убрать из избранного':'В избранное');
+  b.style.color = v.fav ? 'var(--dg)' : '';
+  var g = b.querySelector('svg'); if(g) g.setAttribute('fill', v.fav?'currentColor':'none');
 }
 
 /* ---------- номер мастера ---------- */
