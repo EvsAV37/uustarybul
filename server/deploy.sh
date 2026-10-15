@@ -179,6 +179,13 @@ else
   [ "$(printf '%s' "$r" | jq -r '.ok' 2>/dev/null)" = true ] && echo "задачка для телефона: ок (тестовые номера выключены — вход не проверяется)" \
     || bad "задачка для телефона не прошла: $(printf '%s' "$r" | cut -c1-200)"
 fi
+# превью ссылки на мастера: бот мессенджера получает og-страницу, человек — приложение
+pid=$(psql_db -At -c "select id from public.profiles where public.profile_is_public(id) limit 1" 2>/dev/null)
+if [ -n "$pid" ]; then
+  og=$(curl -s -m 15 --resolve "$HOSTN:443:127.0.0.1" -A 'WhatsApp/2.24' "$URL/?m=$pid" | grep -c 'property="og:title"')
+  hm=$(curl -s -m 15 --resolve "$HOSTN:443:127.0.0.1" -A 'Mozilla/5.0' "$URL/?m=$pid" | grep -c 'property="og:type" content="website"')
+  [ "$og" = 1 ] && [ "$hm" = 1 ] && echo "превью ссылки на мастера: ок" || bad "превью ссылки на мастера не работает (бот: $og, человек: $hm)"
+fi
 systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
 last=$(ls -1t /opt/ub/backups/db-*.dump 2>/dev/null | head -1)
 if [ -n "$last" ]; then

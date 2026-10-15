@@ -5,6 +5,18 @@
 {$PROXY_DOMAIN} {
 	encode zstd gzip
 
+	# Превью ссылки на мастера (…/?m=<id>) для ботов соцсетей и мессенджеров — страница функции og (план, шаг 11).
+	# Поисковики сюда не попадают: им, как и людям, отдаётся приложение.
+	@ogbot {
+		path /
+		query m=*
+		header_regexp User-Agent (?i)(vkShare|facebookexternalhit|facebookcatalog|WhatsApp|TelegramBot|OdklBot|Twitterbot|Slackbot|Discordbot|SkypeUriPreview|Viber|LinkedInBot|redditbot|Pinterest|Iframely|Embedly)
+	}
+	handle @ogbot {
+		rewrite * /functions/v1/og?{query}
+		reverse_proxy api-gw:8000
+	}
+
 	@api path /auth/v1/* /rest/v1/* /graphql/v1 /storage/v1/* /functions/v1/*
 	handle @api {
 		reverse_proxy api-gw:8000
