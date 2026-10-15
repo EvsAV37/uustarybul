@@ -8,3 +8,4 @@ vendor/
 
 # локальная проверка (server/test/local.sh): база, бинарники, собранный сайт
 server/test/.run/
+__pycache__/
