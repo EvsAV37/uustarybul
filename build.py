@@ -110,9 +110,10 @@ if FREE_PRO:
     import datetime as _dt
     _d = _dt.datetime.fromisoformat(FREE_PRO).astimezone(_dt.timezone(_dt.timedelta(hours=9)))  # Якутск, без перехода на летнее время
     FREE_PRO_RU = '%d %s %d' % (_d.day, ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][_d.month-1], _d.year)
-# Черновик: пометка на каждом документе. Снять, когда документы утверждены (план, Часть 2, п. 5), — и поднять
-# DOC_VERSION в src/login.js (дата редакции): люди дадут согласие на новую редакцию.
-DOCS_DRAFT = True
+# Черновики: документы с пометкой «Черновик». Политика, Соглашение и согласия утверждены 16.10.2026 (план, Часть 2, п. 5);
+# оферта — черновик до оплаты Про (ИНН, статус, платёжный сервис, цена доп. сферы). Меняя текст утверждённого документа,
+# поднять DOC_VERSION в src/login.js (дата редакции): люди дадут согласие на новую редакцию.
+DOCS_DRAFT = {'offer'}
 DRAFT_HTML = '<div class="draft">Черновик. Документ ещё не утверждён, выделенные места будут заполнены.</div>\n'
 DOC_VERSION = re.search(r"var DOC_VERSION = '([0-9-]+)';", rd('src/login.js')).group(1)
 meta = []
@@ -120,15 +121,16 @@ for src in sorted(glob.glob(os.path.join(ROOT, 'docs', 'src', '*.html'))):
     body = open(src, encoding='utf8').read()
     ed = re.search(r'Редакция от ([^.<]+)', body)
     meta.append({'key': os.path.basename(src)[:-5], 'title': re.search(r'<h1>(.*?)</h1>', body).group(1),
-                 'edition': ed.group(1).strip() if ed else None, 'gaps': len(re.findall(r'\[([^\]<>]+)\]', body))})
+                 'edition': ed.group(1).strip() if ed else None, 'gaps': len(re.findall(r'\[([^\]<>]+)\]', body)),
+                 'draft': os.path.basename(src)[:-5] in DOCS_DRAFT})
     if FREE_PRO_RU:
         body = re.sub(r'<span data-free-pro>[^<]*</span>', '<span data-free-pro>' + FREE_PRO_RU + '</span>', body)
     body = re.sub(r'\[([^\]<>]+)\]', r'<mark>[\1]</mark>', body)
     title = re.search(r'<h1>(.*?)</h1>', body).group(1)
     open(os.path.join(ROOT, 'docs', os.path.basename(src)), 'w', encoding='utf8').write(
-        DOC_TPL.format(title=title, body=body, draft=DRAFT_HTML if DOCS_DRAFT else ''))
+        DOC_TPL.format(title=title, body=body, draft=DRAFT_HTML if os.path.basename(src)[:-5] in DOCS_DRAFT else ''))
 # Сводка для управления (Настройки → Документы): редакция, пропуски в квадратных скобках, черновик ли
 import json as _json
 open(os.path.join(ROOT, 'docs', 'docs.json'), 'w', encoding='utf8').write(
-    _json.dumps({'version': DOC_VERSION, 'draft': DOCS_DRAFT, 'docs': meta}, ensure_ascii=False, indent=1) + '\n')
+    _json.dumps({'version': DOC_VERSION, 'draft': any(m['draft'] for m in meta if m['key'] != 'offer'), 'docs': meta}, ensure_ascii=False, indent=1) + '\n')
 print('документы собраны')

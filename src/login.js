@@ -1,5 +1,5 @@
 /* ---------- вход по номеру (звонок-сброс через Zvonok) ---------- */
-var DOC_VERSION = '2026-10-10';
+var DOC_VERSION = '2026-10-16';
 /*POW*/
 // Гость: проверка один раз, после неё сервер выдаёт номера мастеров
 function guestCheck(){ return callGuarded({action:'guest'}); }

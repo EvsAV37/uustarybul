@@ -1190,11 +1190,14 @@ var DOCS_RU = { terms:'Соглашение', privacy:'Политика', consen
 // Готовность к запуску: что ещё сделать, прежде чем звать заказчиков
 function readinessCard(st, dj, cfg){
   var ops = st.ops||{}, w = ops.watch||{}, b = ops.backup||{}, adm = st.admins||[];
-  var gaps = dj ? dj.docs.reduce(function(a, x){ return a + x.gaps; }, 0) : null;
+  // для запуска нужны Политика, Соглашение и согласия; оферта — к оплате Про
+  var ld = dj ? dj.docs.filter(function(x){ return x.key!=='offer'; }) : [];
+  var gaps = dj ? ld.reduce(function(a, x){ return a + x.gaps; }, 0) : null;
+  var ldraft = ld.some(function(x){ return x.draft!=null ? x.draft : dj.draft; });
   var items = [
     ['Ключи Zvonok', cfg ? !!cfg.flash : null, cfg ? (cfg.flash ? 'звонок-сброс подключён'+(cfg.callback?', «позвоните нам» тоже':'') : 'не заданы'+(cfg.test_logins?' — вход только тестовыми номерами':'')) : 'не удалось проверить'],
     ['Администратор с паролем', adm.length>0 && adm.every(function(a){ return a.has_password; }), adm.length ? adm.filter(function(a){ return !a.has_password; }).length ? 'у кого-то нет пароля' : 'у всех задан' : 'нет'],
-    ['Документы', dj ? (!dj.draft && gaps===0) : null, dj ? (dj.draft ? 'черновики' : 'утверждены')+(gaps ? ', пропусков: '+gaps : '') : 'не удалось открыть'],
+    ['Документы', dj ? (!ldraft && gaps===0) : null, dj ? (ldraft ? 'черновики' : 'утверждены')+(gaps ? ', пропусков: '+gaps : '')+' · оферта — к оплате Про' : 'не удалось открыть'],
     ['Демо-мастера удалены', !(st.demo&&st.demo.masters), st.demo&&st.demo.masters ? 'осталось '+st.demo.masters : 'да'],
     ['Тестовые номера выключены', cfg ? !cfg.test_logins : !!st.test_logins_off, (cfg ? cfg.test_logins : !st.test_logins_off) ? 'включены' : 'да'],
     ['Копии базы', !!b.ok_at && Date.now()-new Date(b.ok_at) < 26*3600e3, b.ok_at ? 'последняя '+dm(b.ok_at) : 'нет'],
@@ -1244,7 +1247,7 @@ function adminsCard(st){
       return '<div class="row"><span style="flex:1;min-width:0"><b>'+esc(x.phone||'')+'</b>'+(x.me?' <span class="d">· это вы</span>':'')+
         '<span class="d" style="display:block">'+(x.has_password?'пароль задан':'пароля нет')+' · '+(x.last_login?'входил '+dm(x.last_login):'ещё не входил')+'</span></span>'+
         '<span class="chip gry">'+(x.role==='owner'?'владелец':'модератор')+'</span></div>'; }).join('') : '<div class="d">Никого</div>')+'</div>'+
-    '<div class="d" style="line-height:1.5">Назначить или снять — в SQL-редакторе панели Supabase: <code>select admin_grant(\'+7 …\')</code> / <code>select admin_revoke(\'+7 …\')</code>.</div></section>';
+    '<div class="d" style="line-height:1.5">Назначить или снять — командой на сервере (по SSH): <code>docker exec supabase-db psql -U postgres -d postgres -c "select admin_grant(\'+7 …\')"</code>, снять — <code>admin_revoke</code>.</div></section>';
 }
 // Документы: редакция, пропуски, согласия на эту редакцию
 function docsCard(st, dj, until){
@@ -1259,7 +1262,7 @@ function docsCard(st, dj, until){
   };
   return '<section class="card" aria-label="Документы" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Документы</h2><span class="d">версия согласий '+esc(dj.version)+'</span></div>'+
     '<div class="g2d">'+dj.docs.slice().sort(function(a, b){ return Object.keys(DOCS_RU).indexOf(a.key) - Object.keys(DOCS_RU).indexOf(b.key); }).map(function(x){
-      return '<div class="dcard"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(DOCS_RU[x.key]||x.key)+'</b>'+(dj.draft?'<span class="chip yel">черновик</span>':'<span class="chip grn">действует</span>')+'</div>'+
+      return '<div class="dcard"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(DOCS_RU[x.key]||x.key)+'</b>'+((x.draft!=null ? x.draft : dj.draft)?'<span class="chip yel">черновик</span>':'<span class="chip grn">действует</span>')+'</div>'+
         '<div class="d">Редакция от '+esc(x.edition||'—')+' · '+(x.gaps ? '<span style="color:var(--warn)">пропусков: '+x.gaps+'</span>' : 'пропусков нет')+'</div>'+
         '<div class="d">'+esc(who[x.key]||'')+'</div>'+
         '<a class="btn sm" href="../docs/'+esc(x.key)+'.html" target="_blank" rel="noopener" style="align-self:flex-start">Открыть</a></div>'; }).join('')+'</div>'+
