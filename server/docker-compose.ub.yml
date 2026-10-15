@@ -28,7 +28,8 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-      - "8443:8443"
+      # панель Supabase — только с самого сервера; с ПК — через SSH-туннель (README)
+      - "127.0.0.1:8443:8443"
     depends_on:
       api-gw:
         condition: service_healthy

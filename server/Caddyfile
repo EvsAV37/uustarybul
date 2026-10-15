@@ -1,5 +1,5 @@
 # Уустары бул — Caddy: HTTPS (Let's Encrypt, сам продлевает), сайт и API на одном адресе.
-# PROXY_DOMAIN — адрес сайта, REDIRECT_DOMAINS — адреса, перенаправляемые на него, STUDIO_DOMAIN — панель Supabase (:8443).
+# PROXY_DOMAIN — адрес сайта, REDIRECT_DOMAINS — адреса, перенаправляемые на него; панель Supabase — :8443 только через SSH-туннель.
 # Всё задаётся в server/site.env. (перезапуск: 0121)
 
 {$PROXY_DOMAIN} {
@@ -40,9 +40,10 @@
 	}
 }
 
-# Панель Supabase (Studio) — только по паролю. Журнал — для fail2ban (неверные пароли → бан, server/fail2ban);
-# пароль Caddy в журнал не пишет. Хранится до 3 файлов по 5 МБ, не дольше недели.
-{$STUDIO_DOMAIN} {
+# Панель Supabase (Studio) — из интернета закрыта: порт 8443 открыт только на 127.0.0.1 сервера (docker-compose.ub.yml).
+# С ПК — через SSH-туннель: ssh -L 8443:127.0.0.1:8443 root@45.150.10.178, затем http://localhost:8443
+# (HTTP внутри туннеля — соединение шифрует SSH). Плюс пароль. Журнал — для fail2ban; пароль Caddy в журнал не пишет.
+http://:8443 {
 	log {
 		output file /var/log/caddy/studio.log {
 			roll_size 5MiB

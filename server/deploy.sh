@@ -1,6 +1,6 @@
 #!/bin/bash
 # Уустары бул — выкладка версии на сервер. Запускает ub-run (от root) из распакованного архива коммита.
-#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban, таймеры: дата Про, копии базы, сторож, чистка хранилища)
+#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban, SSH только по ключу, таймеры: дата Про, копии базы, сторож, чистка хранилища)
 #   2. серверные функции (supabase/functions/*)
 #   3. миграции базы: server/db/*.sql, затем supabase/migrations/*.sql — каждая один раз (ops.migrations)
 #   4. server/run.sql — разовые запросы/загрузки: выполняется, если файл изменился
@@ -79,6 +79,26 @@ if command -v fail2ban-client >/dev/null && { [ $f2b = 1 ] || ! systemctl is-act
     fail2ban-client set ub-studio unbanip $t >/dev/null 2>&1
     [ $ok = 1 ] && echo "fail2ban: самопроверка бана прошла (SSH — INPUT, панель — DOCKER-USER)" || bad "fail2ban: бан не ставится в iptables"
   else bad "fail2ban: ошибка в настройках"; fail2ban-client -t 2>&1 | tail -5; fi
+fi
+
+# Вход на сервер только по ключу (план, Часть 2, шаг 7). Пароль закрывается, только когда у root есть ключ ПК
+# пользователя (комментарий uustarybul-pc) и по ключу уже входили — иначе можно запереть сервер.
+# Запасной путь — консоль (VNC) в панели FirstVDS: там пароль root работает.
+sshc=/etc/ssh/sshd_config.d/00-uustarybul.conf
+if ! cmp -s "$REL/server/ssh/00-uustarybul.conf" "$sshc"; then
+  nkey=$(grep -c 'uustarybul-pc' /root/.ssh/authorized_keys 2>/dev/null || true)
+  nok=$( { journalctl --since "14 days ago" -q 2>/dev/null; cat /var/log/auth.log 2>/dev/null; } | grep -c 'Accepted publickey for root' || true)
+  if [ "${nkey:-0}" -ge 1 ] && [ "${nok:-0}" -ge 1 ]; then
+    install -m 644 "$REL/server/ssh/00-uustarybul.conf" "$sshc"; install -d -m 755 /run/sshd
+    if sshd -t 2>/dev/null; then
+      systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || systemctl restart ssh
+      echo "SSH: вход по паролю закрыт (ключ ПК есть, вход по ключу был)"
+    else rm -f "$sshc"; bad "SSH: ошибка в настройках, вход по паролю оставлен"; fi
+  else bad "SSH: вход по паролю НЕ закрыт — нет ключа ПК у root или входа по нему (ключей: ${nkey:-0}, входов: ${nok:-0})"; fi
+fi
+# панель :8443 из интернета закрыта (порт только на 127.0.0.1) — правило брандмауэра больше не нужно
+if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q '^8443'; then
+  ufw delete allow 8443/tcp >/dev/null 2>&1 && echo "брандмауэр: правило для 8443 убрано"
 fi
 
 step "2. Функции"
@@ -202,11 +222,23 @@ if systemctl is-active -q fail2ban && [ -n "$(f2b_n sshd)" ] && [ -n "$(f2b_n ub
   echo "fail2ban: работает, сейчас заблокировано — SSH $(f2b_n sshd), панель $(f2b_n ub-studio)"
   # неверный пароль панели с самого сервера → строка в журнале Caddy → её видит фильтр fail2ban
   sl=/var/log/ub-caddy/studio.log; n0=$(wc -l < "$sl" 2>/dev/null || echo 0)
-  curl -s -o /dev/null -m 10 -u ub-check:wrong --resolve "$HOSTN:8443:127.0.0.1" "https://$HOSTN:8443/" || true
+  curl -s -o /dev/null -m 10 -u ub-check:wrong "http://127.0.0.1:8443/" || true
   sleep 1; tmpl=$(mktemp); tail -n +$((n0 + 1)) "$sl" > "$tmpl" 2>/dev/null
   m=$(fail2ban-regex "$tmpl" /etc/fail2ban/filter.d/ub-studio.conf 2>/dev/null | sed -n 's/^Lines: .*, \([0-9]*\) matched.*/\1/p'); rm -f "$tmpl"
   [ "${m:-0}" -ge 1 ] && echo "панель: неверный пароль попадает в журнал и в фильтр fail2ban" || bad "панель: неверный пароль не виден fail2ban"
 else bad "fail2ban не работает"; fi
+# SSH только по ключу; панель :8443 слушается только на 127.0.0.1 (из интернета закрыта)
+install -d -m 755 /run/sshd
+if sshd -T 2>/dev/null | grep -qx 'passwordauthentication no' && sshd -T 2>/dev/null | grep -qx 'kbdinteractiveauthentication no'; then
+  echo "SSH: вход только по ключу"
+else echo "SSH: вход по паролю ещё открыт"; fi
+l8443=$(docker port supabase-caddy 8443/tcp 2>/dev/null | sort -u | tr '\n' ' ')
+case "$l8443" in
+  "127.0.0.1:8443 ") echo "панель: только через SSH-туннель (порт 8443 — на 127.0.0.1)";;
+  "") bad "панель: порт 8443 не опубликован";;
+  *) bad "панель: 8443 открыт не только на 127.0.0.1 ($l8443)";;
+esac
+c=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://127.0.0.1:8443/"); [ "$c" = 401 ] && echo "панель: просит пароль" || bad "панель: ответ $c вместо 401"
 free -m | awk '/Mem/{printf "память: занято %s из %s МБ\n",$3,$2}'
 df -h / | awk 'NR==2{printf "диск: занято %s из %s\n",$3,$2}'
 

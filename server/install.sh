@@ -3,7 +3,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/EvsAV37/uustarybul/main/server/install.sh | bash
 #
 # Что делает:
-#   1. файл подкачки 2 ГБ, Docker из пакетов Ubuntu, зеркала Docker Hub, брандмауэр (22, 80, 443, 8443)
+#   1. файл подкачки 2 ГБ, Docker из пакетов Ubuntu, зеркала Docker Hub, брандмауэр (22, 80, 443; панель :8443 — только через SSH-туннель)
 #   2. Supabase (официальный self-hosted, версия закреплена) в /opt/supabase, все ключи — новые, только на сервере
 #   3. Caddy с HTTPS на адресе сервера; сайт выкладывает GitHub Actions
 #   4. пользователь deploy: по ключу может только одно — выложить новую версию (ub-run)
@@ -59,8 +59,8 @@ fi
 docker --version; docker compose version
 
 log "3/7 Брандмауэр"
-ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443 >/dev/null; ufw allow 8443/tcp >/dev/null
-ufw --force enable >/dev/null && echo "открыты 22, 80, 443, 8443"
+ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443 >/dev/null
+ufw --force enable >/dev/null && echo "открыты 22, 80, 443"
 
 log "4/7 Supabase ($SB_REF)"
 if [ -f "$SB/.env" ]; then echo "уже установлен"; else
@@ -124,7 +124,7 @@ cat <<EOF
 
 =====================================================================
  Готово. Сайт: https://$DOMAIN
- Панель Supabase: https://$DOMAIN:8443  (логин admin, пароль ниже)
+ Панель Supabase: ssh -L 8443:127.0.0.1:8443 root@<IP>, затем http://localhost:8443  (логин admin, пароль ниже)
  Пароль панели: $STUDIO_PASS
  (пароль Claude не нужен; посмотреть снова: grep DASHBOARD /opt/supabase/.env)
 
