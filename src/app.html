@@ -918,7 +918,7 @@ function hideSplash(){
 setTimeout(hideSplash, 3500);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
-  if(/[?&]go=ideas\b/.test(location.search)){ view = {name:'settings'}; pendingIdeas = true; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
+  if(/[?&]go=ideas\b/.test(location.search)){ view = {name:'cab'}; pendingIdeas = true; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
   var dd = /[?&]doc=(terms|privacy|consents|offer)\b/.exec(location.search);
   if(dd){ try{ history.replaceState(null, '', location.pathname); }catch(e){} setTimeout(function(){ openDoc(dd[1]); }, 0); }
@@ -929,7 +929,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('messa
   if(!e.data) return;
   if(e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
   else if(e.data.go==='home'){ closeSheet(); S.stack=[]; go({name:'home'}, false); }
-  else if(e.data.go==='ideas'){ closeSheet(); S.stack=[]; go({name:'settings'}, false); myIdeasScreen(); }
+  else if(e.data.go==='ideas'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); myIdeasScreen(); }
   else if(/^(terms|privacy|consents|offer)$/.test(e.data.doc||'')) openDoc(e.data.doc);
 });
 render();

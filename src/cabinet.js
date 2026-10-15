@@ -227,11 +227,15 @@ function settingsBlock(hasProfile){
   var chev = '<span class="muted">'+svg('M9 6l6 6-6 6',18,2)+'</span>';
   return '<div class="group">'+
     (hasProfile?'<button type="button" class="opt grow" id="viewP" style="padding-right:16px">Как меня видят заказчики'+chev+'</button>':'')+
+    '<button type="button" class="opt grow" id="ideaB" style="padding-right:16px">Предложить идею'+chev+'</button>'+
+    (isRegistered()?'<button type="button" class="opt grow" id="myIdeasB" style="padding-right:16px">Мои предложения'+chev+'</button>':'')+
     '<button type="button" class="opt grow" id="setB" style="padding-right:16px">Настройки'+chev+'</button></div>';
 }
 function bindSettings(p){
   var e = document.getElementById('viewP'); if(e) e.onclick = function(){ go({name:'profile', id:p.id, from:'Кабинет', own:true}); };
   document.getElementById('setB').onclick = function(){ go({name:'settings', from:'Кабинет', tab:'cab'}); };
+  document.getElementById('ideaB').onclick = ideaScreen;
+  var mi = document.getElementById('myIdeasB'); if(mi) mi.onclick = myIdeasScreen;
 }
 
 /* ---------- фото профиля ---------- */

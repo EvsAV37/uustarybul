@@ -23,10 +23,6 @@ function settingsView(){
 
     (canInstall() ? '<div class="sec-h">Приложение</div><div class="group"><button type="button" class="srow" id="sInst"><span>Установить на экран телефона</span><span class="v">'+chev+'</span></button></div>' : '')+
 
-    '<div class="sec-h">Обратная связь</div><div class="group">'+
-      '<button type="button" class="srow" id="sIdea"><span>Предложить идею</span><span class="v">'+chev+'</span></button>'+
-      (reg ? '<button type="button" class="srow" id="sMyIdeas"><span>Мои предложения</span><span class="v">'+chev+'</span></button>' : '')+
-    '</div>'+
     '<div class="sec-h">Документы</div><div class="group">'+DOCS.map(function(d){
       return '<button type="button" class="srow" data-doc="'+d[0]+'"><span>'+d[1]+'</span><span class="v">'+chev+'</span></button>'; }).join('')+'</div>'+
     '<div class="sec-h">Аккаунт</div><div class="group">'+
@@ -50,8 +46,6 @@ function settingsView(){
     app.querySelectorAll('[data-theme-opt]').forEach(function(x){ x.setAttribute('aria-checked', String(x===b)); });
   }; });
   var ib = document.getElementById('sInst'); if(ib) ib.onclick = installApp;
-  document.getElementById('sIdea').onclick = ideaScreen;
-  var mi = document.getElementById('sMyIdeas'); if(mi) mi.onclick = myIdeasScreen;
   var si = document.getElementById('sIn'); if(si) si.onclick = function(){ loginSheet(); };
   var so = document.getElementById('sOut'); if(so) so.onclick = function(){
     pushOff().then(function(){ return sb.auth.signOut(); }).then(function(){ toast('Вы вышли'); S.stack=[]; go({name:'home'}, false); });
@@ -160,33 +154,43 @@ function ideaMsg(e){
   if(/registration_required/.test(m)) return 'Нужен вход по номеру телефона.';
   return errText(e);
 }
+// Окно открывается у всех; вход по номеру — только при отправке (текст не пропадает: черновик в памяти до отправки)
+var ideaDraft = {kind:'', body:''};
+function ideaSendDraft(btn){
+  return sb.rpc('idea_send', {p_kind:ideaDraft.kind, p_body:ideaDraft.body, p_city:S.city||null, p_device:deviceShort(), p_version:APP_VERSION}).then(function(r){
+    if(r.error){ if(btn) btn.disabled=false; else ideaScreen(); return toast(ideaMsg(r.error)); }
+    ideaDraft = {kind:'', body:''};
+    closeScreen(); toast('Спасибо! Ответ появится в «Моих предложениях»');
+    if(view.name==='cab') render();
+  });
+}
 function ideaScreen(){
-  if(!isRegistered()) return needRegistration('Предложения принимаем от тех, кто вошёл по номеру, — так мы сможем ответить вам в приложении.', ideaScreen);
-  var cur = '';
+  var cur = ideaDraft.kind;
   function list(){ return IDEA_KINDS.map(function(x){ return '<button type="button" class="radio" role="radio" aria-checked="'+(x[0]===cur)+'" data-k="'+x[0]+'"><span class="r"></span>'+x[1]+'</button>'; }).join(''); }
   openScreen(scrTop('<button type="button" class="back" data-close>Отмена</button>', 'Предложение', '')+
     '<div class="scr-body">'+
     '<div><h1 class="lg-h">Что улучшить?</h1><div class="muted" style="font-size:15px;margin-top:4px;line-height:1.4">Мы читаем всё и отвечаем в «Моих предложениях».</div></div>'+
     '<div class="group" role="radiogroup" aria-label="О чём" id="ik">'+list()+'</div>'+
-    '<label class="field"><span>Сообщение</span><textarea id="it" class="inp" maxlength="1000" rows="6" placeholder="Что придумали, что неудобно или что не работает"></textarea></label>'+
-    '<div class="muted" style="font-size:13px;text-align:right;margin-top:-8px" id="ic">0 / 1000</div>'+
+    '<label class="field"><span>Сообщение</span><textarea id="it" class="inp" maxlength="1000" rows="6" placeholder="Что придумали, что неудобно или что не работает">'+esc(ideaDraft.body)+'</textarea></label>'+
+    '<div class="muted" style="font-size:13px;text-align:right;margin-top:-8px" id="ic">'+ideaDraft.body.length+' / 1000</div>'+
     '<div class="muted" style="font-size:13px;line-height:1.45">К сообщению прикрепятся: мастер вы или заказчик, город, тип телефона и браузера ('+esc(deviceShort()||'неизвестно')+'), версия приложения. Номер телефона не прикрепляется.</div>'+
     '<div class="muted" style="font-size:13px;line-height:1.45">Вопросы о ваших персональных данных — на <a class="lnk" href="mailto:uustarybul@mail.ru">uustarybul@mail.ru</a>.</div>'+
     '<div class="spacer"></div>'+
     '<button type="button" class="btn pr" id="is">Отправить</button></div>',
   function(){
     var ik = document.getElementById('ik'), it = document.getElementById('it');
-    ik.addEventListener('click', function(e){ var b=e.target.closest('[data-k]'); if(!b) return; cur=b.getAttribute('data-k'); ik.innerHTML=list(); });
-    it.addEventListener('input', function(){ document.getElementById('ic').textContent = it.value.length+' / 1000'; });
+    ik.addEventListener('click', function(e){ var b=e.target.closest('[data-k]'); if(!b) return; cur=ideaDraft.kind=b.getAttribute('data-k'); ik.innerHTML=list(); });
+    it.addEventListener('input', function(){ ideaDraft.body = it.value; document.getElementById('ic').textContent = it.value.length+' / 1000'; });
     document.getElementById('is').onclick = function(){
       if(!cur) return toast('Выберите: идея, неудобно или сломалось');
       if(it.value.trim().length < 5) return toast('Напишите чуть подробнее');
+      if(!isRegistered()){
+        return openSheet('<h2>Осталось войти по номеру — и сообщение уйдёт</h2>'+
+          '<button type="button" class="btn pr" id="il">Войти по номеру</button><button type="button" class="btn" data-close style="margin-top:6px">Не сейчас</button>',
+          function(){ document.getElementById('il').onclick = function(){ loginSheet(function(){ ideaSendDraft(null); }); }; });
+      }
       var b = document.getElementById('is'); b.disabled = true;
-      sb.rpc('idea_send', {p_kind:cur, p_body:it.value, p_city:S.city||null, p_device:deviceShort(), p_version:APP_VERSION}).then(function(r){
-        if(r.error){ b.disabled=false; return toast(ideaMsg(r.error)); }
-        closeScreen(); toast('Спасибо! Ответ появится в «Моих предложениях»');
-        if(view.name==='settings') settingsView();
-      });
+      ideaSendDraft(b);
     };
   });
 }
