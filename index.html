@@ -1583,15 +1583,17 @@ function settingsView(){
     });
   };
 
-  // Уведомления — только мастерам: про срок карточек, Про и новые отзывы
+  // Уведомления — мастерам (срок карточек, Про, новые отзывы) и администраторам (сторож: сбои сервера)
   if(!reg) return;
   var me = uid();
   Promise.all([
     sb.from('profiles').select('id').eq('id', me).maybeSingle(),
     sb.from('notify_prefs').select('expiry,reviews,quiet,quiet_from,quiet_to').eq('user_id', me).maybeSingle(),
-    pushIsOn()
+    pushIsOn(),
+    sb.rpc('admin_state').then(function(x){ return !!(x.data && x.data.admin); }, function(){ return false; })
   ]).then(function(r){
-    if(view!==v || !r[0].data) return;
+    var master = !!r[0].data, admin = r[3];
+    if(view!==v || !(master || admin)) return;
     var pr = r[1].data || {expiry:true, reviews:true, quiet:false, quiet_from:22, quiet_to:8};
     var dev = r[2], busy = false;
     var box = document.getElementById('nBox'); if(!box) return;
@@ -1605,7 +1607,9 @@ function settingsView(){
         ? 'На iPhone уведомления приходят только в установленном приложении — пункт «Установить на экран телефона» ниже.'
         : 'Этот браузер не умеет присылать уведомления.';
       else if(Notification.permission==='denied') t = 'Уведомления запрещены в настройках браузера. Разрешите их для этого сайта и включите снова.';
-      else t = 'О скрытии карточки или профиля после жалоб сообщаем всегда.'+(pr.quiet ? ' В тихие часы уведомления ждут их окончания.' : '');
+      else t = (master ? 'О скрытии карточки или профиля после жалоб сообщаем всегда.' : '')+
+               (admin ? (master ? ' ' : '')+'Сюда же сторож присылает сообщения о сбоях сервера.' : '')+
+               (pr.quiet ? ' В тихие часы уведомления ждут их окончания.' : '');
       return t;
     }
     function save(){
@@ -1617,7 +1621,7 @@ function settingsView(){
       box.innerHTML =
         '<div class="sec-h">Уведомления</div><div class="group">'+
         '<div class="srow"><span id="nl_dev">На этот телефон</span><button type="button" class="sw" role="switch" id="nDev" aria-labelledby="nl_dev" aria-checked="'+(dev&&canDev)+'"'+(canDev?'':' disabled')+(busy?' aria-busy="true"':'')+'></button></div>'+
-        [['expiry','Срок карточек и Про'],['reviews','Новые отзывы'],['quiet','Тихие часы']].map(function(o){
+        (master ? [['expiry','Срок карточек и Про'],['reviews','Новые отзывы'],['quiet','Тихие часы']] : [['quiet','Тихие часы']]).map(function(o){
           var on = o[0]==='quiet' ? !!pr.quiet : pr[o[0]]!==false;
           return '<div class="srow"><span id="nl_'+o[0]+'">'+o[1]+'</span><button type="button" class="sw" role="switch" aria-labelledby="nl_'+o[0]+'" aria-checked="'+on+'" data-np="'+o[0]+'"></button></div>';
         }).join('')+

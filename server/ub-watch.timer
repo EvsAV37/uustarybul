@@ -1,0 +1,11 @@
+# Уустары бул — сторож каждые 5 минут.
+[Unit]
+Description=Uustary bul: watchdog every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -4,7 +4,7 @@
   python3 server/test/browser.py /                         — главная, 390 и 1440 px, светлая и тёмная
   python3 server/test/browser.py /admin/#security --as admin
   python3 server/test/browser.py /?go=cab --as 70000000001 --widths 390 --themes dark
-  python3 server/test/browser.py / --eval "window.__go && __go('cab')" --wait 3000
+  python3 server/test/browser.py / --as 70000000001 --click 'text=Кабинет' --click 'text=Настройки'
 
 --as: гость не вошёл (по умолчанию) | anon (гость с сессией) | номер 7XXXXXXXXXX | admin (номер +7 000 000-00-03,
 назначен администратором, пароль задан, управление открыто) | admin-locked (то же, но спросит пароль).
@@ -32,7 +32,7 @@ def session_for(spec):
     return json.load(urllib.request.urlopen(req, timeout=30))
 
 
-def shots(items, widths=(390, 1440), themes=('light', 'dark'), wait=2500, js=None, full_page=False):
+def shots(items, widths=(390, 1440), themes=('light', 'dark'), wait=2500, js=None, full_page=False, clicks=()):
     """items: [(имя, сессия, путь)]. Возвращает [(файл, [ошибки])]."""
     from playwright.sync_api import sync_playwright
     os.makedirs(OUT, exist_ok=True)
@@ -56,10 +56,14 @@ def shots(items, widths=(390, 1440), themes=('light', 'dark'), wait=2500, js=Non
                     pg.on('console', lambda m, errors=errors: m.type == 'error' and errors.append('console: ' + m.text))
                     pg.on('response', lambda r, errors=errors: r.status >= 500 and errors.append(f'{r.status} {r.url}'))
                     pg.goto(BASE + path, wait_until='networkidle')
+                    pg.wait_for_timeout(wait)
                     if js:
                         pg.evaluate(js)
                         pg.wait_for_load_state('networkidle')
-                    pg.wait_for_timeout(wait)
+                    for c in clicks:  # Playwright-селекторы: 'text=Кабинет', '#id', 'role=button[name="…"]'
+                        pg.locator(c).first.click()
+                        pg.wait_for_load_state('networkidle')
+                        pg.wait_for_timeout(700)
                     fn = os.path.join(OUT, '%s-%s-%d-%s.png' % (name, re.sub(r'[^a-z0-9]+', '_', path.lower()).strip('_') or 'root', w, th))
                     pg.screenshot(path=fn, full_page=full_page)
                     # Картинки демо-мастеров на локальной копии отсутствуют — 404 на фото не считаем ошибкой
@@ -79,10 +83,11 @@ def main():
     ap.add_argument('--wait', type=int, default=2500)
     ap.add_argument('--eval', dest='js', default=None)
     ap.add_argument('--name', default=None)
+    ap.add_argument('--click', action='append', default=[], help='нажать по очереди (селектор Playwright, напр. "text=Кабинет")')
     ap.add_argument('--full', action='store_true', help='вся страница (закреплённые панели окажутся посередине)')
     a = ap.parse_args()
     out = shots([(a.name or ('admin' if a.path.startswith('/admin') else 'app'), a.who, a.path)],
-                widths=[int(x) for x in a.widths.split(',')], themes=a.themes.split(','), wait=a.wait, js=a.js, full_page=a.full)
+                widths=[int(x) for x in a.widths.split(',')], themes=a.themes.split(','), wait=a.wait, js=a.js, full_page=a.full, clicks=a.click)
     bad = 0
     for fn, errs in out:
         print(fn)

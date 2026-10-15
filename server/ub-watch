@@ -1,0 +1,52 @@
+#!/bin/bash
+# Уустары бул — сторож (план, шаг 4). Ставит deploy.sh в /usr/local/sbin, запускает таймер ub-watch.timer раз в 5 минут.
+# Проверяет то, что видно только с сервера (сайт, API, вход, функции, диск, память, контейнеры, fail2ban, таймеры),
+# и передаёт сбои в базу — public.ops_watch_report() добавит проверки по базе (копии, cron, очередь push, Zvonok),
+# решит, кого и когда уведомить (push администраторам), и запишет итог для «Системы» в управлении.
+#   ub-watch          — одна проверка (тихо; печатает только сбои)
+#   ub-watch -v       — с подробностями
+# Во время выкладки (занят /run/ub-deploy.lock) не проверяет — перезапуски не тревожат.
+set -uo pipefail
+SB=/opt/supabase
+V=0; [ "${1:-}" = "-v" ] && V=1
+exec 9>/run/ub-deploy.lock
+flock -n 9 || { [ $V = 1 ] && echo "идёт выкладка — пропуск"; exit 0; }
+flock -u 9
+
+cd "$SB" || exit 1
+URL=$(grep '^SUPABASE_PUBLIC_URL=' .env | cut -d= -f2-); HOSTN=${URL#https://}
+ANON=$(grep '^ANON_KEY=' .env | cut -d= -f2-)
+F=()
+add() { F+=("$(jq -cn --arg id "$1" --arg t "$2" '{id:$id,text:$t}')"); [ $V = 1 ] && echo "СБОЙ: $2"; }
+code() { curl -s -o /dev/null -m 15 -w '%{http_code}' --resolve "$HOSTN:443:127.0.0.1" "$@"; }
+
+c=$(code "$URL/");                                                [ "$c" = 200 ] || add site "сайт не открывается (ответ $c)"
+c=$(code -H "apikey: $ANON" "$URL/rest/v1/cities?select=id&limit=1"); [ "$c" = 200 ] || add api "API не отвечает (ответ $c)"
+c=$(code -H "apikey: $ANON" "$URL/auth/v1/health");               [ "$c" = 200 ] || add auth "сервис входа не отвечает (ответ $c)"
+c=$(code -X POST -H 'Content-Type: application/json' -d '{"action":"challenge"}' "$URL/functions/v1/verify-phone")
+[ "$c" = 200 ] || add functions "функция входа не отвечает (ответ $c)"
+c=$(code -X POST -H 'Content-Type: application/json' -d '{}' "$URL/functions/v1/send-push")
+[ "$c" = 200 ] || add push "функция уведомлений не отвечает (ответ $c)"
+
+used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
+[ "${used:-0}" -lt 90 ] || add disk "диск заполнен на ${used}%"
+avail=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+[ "${avail:-0}" -ge 150 ] || add memory "мало памяти: свободно ${avail} МБ"
+
+# контейнеры: все запущенные должны быть живы и здоровы
+while read -r svc state health; do
+  [ -z "$svc" ] && continue
+  if [ "$state" != running ] || [ "$health" = unhealthy ]; then add "container:$svc" "не работает: $svc ($state${health:+, $health})"; fi
+done < <(docker compose ps -a --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null)
+docker compose ps --format '{{.Service}}' 2>/dev/null | grep -qx db || add "container:db" "база не запущена"
+
+systemctl is-active -q fail2ban || add fail2ban "fail2ban не работает"
+for t in ub-backup.timer ub-free-pro-sync.timer; do systemctl is-active -q "$t" || add "timer:$t" "не работает таймер $t"; done
+
+json=$(printf '%s\n' "${F[@]}" | jq -cs '.')
+out=$(docker exec -i supabase-db psql -X -q -At -v ON_ERROR_STOP=1 -U postgres -d postgres \
+        -c "select public.ops_watch_report('$(printf '%s' "$json" | sed "s/'/''/g")'::jsonb)" 2>&1)
+if [ $? != 0 ]; then echo "сторож: база не отвечает — $(printf '%s' "$out" | tail -1 | cut -c1-200)"; exit 1; fi
+[ $V = 1 ] && echo "подтверждённые сбои: $out"
+[ "$out" = "[]" ] || echo "сторож: $(printf '%s' "$out" | jq -r 'map(.text) | join("; ")')"
+exit 0

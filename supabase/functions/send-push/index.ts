@@ -55,6 +55,7 @@ function day(iso: unknown, tz: string): string {
 // Куда ведёт нажатие: кабинет (по умолчанию), главная или документ
 const DOC_KEYS = ['terms', 'privacy', 'consents', 'offer'];
 function openUrl(kind: string, p: Record<string, unknown>): string {
+  if (kind === 'watch') return './admin/';   // сторож (ub-watch) — администраторам, открывает управление
   if (kind !== 'broadcast') return OPEN_URL;
   const go = String(p.go || 'cab');
   if (go === 'home') return './';
@@ -93,6 +94,8 @@ function text(kind: string, p: Record<string, unknown>, tz: string): { title: st
         : { title: 'Карточка снова в поиске', body: `Мы проверили жалобы — ${t} снова видна заказчикам.` };
     case 'blocked':
       return { title: 'Профиль заблокирован', body: 'После проверки жалоб профиль скрыт из поиска. Подробности в кабинете.' };
+    case 'watch': // сторож сервера (ub-watch → ops_watch_report): только администраторам
+      return { title: String(p.title || 'Сторож').slice(0, 60), body: String(p.body || '').slice(0, 200) };
     case 'broadcast': // рассылка из управления: текст пишет администратор (только служебное)
       return { title: String(p.title || 'Уустары бул').slice(0, 60), body: String(p.body || '').slice(0, 200) };
     default:
@@ -123,7 +126,7 @@ async function runBatch(v: Vapid) {
     let st = 0;
     try {
       st = (await sendPush({ endpoint: r.r_endpoint, p256dh: r.r_p256dh, auth: r.r_auth }, msg, v, SUBJECT,
-        { ttl: 86400, urgency: ['hidden_by_complaints','hidden_by_admin','blocked'].includes(r.r_kind) ? 'high' : 'normal' })).status;
+        { ttl: 86400, urgency: ['hidden_by_complaints','hidden_by_admin','blocked','watch'].includes(r.r_kind) ? 'high' : 'normal' })).status;
     } catch (e) {
       st = String(e).includes('bad_keys') ? 400 : 0; // 0 — сеть/таймаут
     }

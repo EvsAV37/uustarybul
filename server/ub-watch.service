@@ -1,0 +1,9 @@
+# Уустары бул — сторож (server/ub-watch). Ставит deploy.sh.
+[Unit]
+Description=Uustary bul: watchdog
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ub-watch
+Nice=5

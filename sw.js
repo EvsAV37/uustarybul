@@ -3,7 +3,7 @@
    Значки и шрифт (свой, fonts/): из кеша, в фоне обновляются.
    Запросы к Supabase не трогаем — данные всегда свежие.
    Push: показывает уведомление, по нажатию открывает кабинет (у рассылки — главную или документ). */
-var VERSION = 'ub-v11';
+var VERSION = 'ub-v12';
 var CORE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-64.png', 'icons/logo-mark.webp',
   'fonts/onest.css', 'fonts/onest-cyrillic.woff2', 'fonts/onest-latin.woff2'];
 
@@ -83,9 +83,13 @@ self.addEventListener('push', function (e) {
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = new URL((e.notification.data && e.notification.data.url) || './?go=cab', self.registration.scope).href;
+  var admin = self.registration.scope + 'admin/';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
+      // сторож ведёт в управление: открытое управление — на передний план, приложение не трогаем
+      if (url.indexOf(admin) === 0) { if (c.url.indexOf(admin) === 0 && 'focus' in c) return c.focus(); continue; }
+      if (c.url.indexOf(admin) === 0) continue;
       if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) {
         var q = new URL(url).searchParams;
         c.postMessage(q.get('doc') ? { doc: q.get('doc') } : { go: q.get('go') === 'cab' ? 'cab' : 'home' });

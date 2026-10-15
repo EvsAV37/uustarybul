@@ -1,6 +1,6 @@
 #!/bin/bash
 # Уустары бул — выкладка версии на сервер. Запускает ub-run (от root) из распакованного архива коммита.
-#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban, таймеры: дата Про, копии базы)
+#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban, таймеры: дата Про, копии базы, сторож)
 #   2. серверные функции (supabase/functions/*)
 #   3. миграции базы: server/db/*.sql, затем supabase/migrations/*.sql — каждая один раз (ops.migrations)
 #   4. server/run.sql — разовые запросы/загрузки: выполняется, если файл изменился
@@ -26,17 +26,17 @@ step "1. Настройки сервера"
 recreate=0; caddy=0
 if ! cmp -s "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; then cp "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; recreate=1; echo "обновлён docker-compose.ub.yml"; fi
 if ! cmp -s "$REL/server/Caddyfile" ub/Caddyfile; then cp "$REL/server/Caddyfile" ub/Caddyfile; caddy=1; echo "обновлён Caddyfile"; fi
-for t in ub-run ub-secret ub-free-pro-sync ub-backup; do
+for t in ub-run ub-secret ub-free-pro-sync ub-backup ub-watch; do
   cmp -s "$REL/server/$t" "/usr/local/sbin/$t" || { install -m 755 "$REL/server/$t" "/usr/local/sbin/$t"; echo "обновлён $t"; }
 done
 # таймер: дата бесплатного Про в сайте = дата в базе (раз в 5 минут)
-# таймер: копия базы каждую ночь (ub-backup, план, шаг 3)
+# таймеры: копия базы каждую ночь (ub-backup, план, шаг 3), сторож каждые 5 минут (ub-watch, шаг 4)
 units=0
-for u in ub-free-pro-sync.service ub-free-pro-sync.timer ub-backup.service ub-backup.timer; do
+for u in ub-free-pro-sync.service ub-free-pro-sync.timer ub-backup.service ub-backup.timer ub-watch.service ub-watch.timer; do
   cmp -s "$REL/server/$u" "/etc/systemd/system/$u" || { install -m 644 "$REL/server/$u" "/etc/systemd/system/$u"; units=1; echo "обновлён $u"; }
 done
 if [ $units = 1 ]; then
-  systemctl daemon-reload && systemctl enable -q --now ub-free-pro-sync.timer ub-backup.timer || bad "таймеры не включились"
+  systemctl daemon-reload && systemctl enable -q --now ub-free-pro-sync.timer ub-backup.timer ub-watch.timer || bad "таймеры не включились"
 fi
 # адреса из server/site.env
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*$|$1=$2|" .env; else printf '%s=%s\n' "$1" "$2" >> .env; fi; }
@@ -158,6 +158,10 @@ if [ -n "$last" ]; then
   echo "копии базы: $(ls -1 /opt/ub/backups/db-*.dump | wc -l), последняя $(basename "$last") ($(du -h "$last" | cut -f1)); таймер: $(systemctl is-active ub-backup.timer)"
   [ -n "$(find "$last" -mmin -1600)" ] || bad "последней копии базы больше суток"
 else bad "копий базы нет"; fi
+# сторож: таймер и его последняя проверка (сама проверка во время выкладки пропускается)
+w=$(psql_db -At -F'|' -c "select coalesce(to_char(checked_at at time zone 'Asia/Yakutsk','DD.MM HH24:MI'),'ещё не было'), jsonb_array_length(fails) from ops.watch_state" 2>/dev/null)
+echo "сторож: таймер $(systemctl is-active ub-watch.timer), последняя проверка ${w%%|*}, сбоев ${w##*|}"
+systemctl is-active -q ub-watch.timer || bad "сторож не работает"
 f2b_n() { fail2ban-client status "$1" 2>/dev/null | sed -n 's/.*Currently banned:[[:space:]]*//p'; }
 if systemctl is-active -q fail2ban && [ -n "$(f2b_n sshd)" ] && [ -n "$(f2b_n ub-studio)" ]; then
   echo "fail2ban: работает, сейчас заблокировано — SSH $(f2b_n sshd), панель $(f2b_n ub-studio)"

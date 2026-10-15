@@ -317,8 +317,15 @@ function opsRows(s){
   var rc = !r.ok_at && !r.fail_at ? '<span class="chip gry">ещё не было</span>'
     : bad(r.ok_at, r.fail_at) ? '<span class="chip red">ошибка '+when(r.fail_at)+'</span>'
     : '<span class="chip '+(now-new Date(r.ok_at) > 8*24*H ? 'yel' : 'grn')+'">'+when(r.ok_at)+'</span>';
+  var w = s.watch||{}, wf = w.fails||[], wc;
+  if(!w.checked_at) wc = '<span class="chip gry">ещё не проверял</span>';
+  else if(now-new Date(w.checked_at) > 15*60e3) wc = '<span class="chip red">молчит с '+when(w.checked_at)+'</span>';
+  else if(wf.length) wc = '<span class="chip red">'+wf.length+' '+plural(wf.length,'сбой','сбоя','сбоев')+(w.since?' с '+when(w.since):'')+'</span>';
+  else wc = '<span class="chip grn">всё в порядке</span>';
   return '<div class="row"><span style="flex:1">Копия базы</span>'+bc+'</div>'+
-         '<div class="row"><span style="flex:1">Проверка копии</span>'+rc+'</div>';
+         '<div class="row"><span style="flex:1">Проверка копии</span>'+rc+'</div>'+
+         '<div class="row" style="flex-wrap:wrap"><span style="flex:1">Сторож</span>'+wc+
+           (wf.length ? '<div class="d" style="flex-basis:100%;color:var(--dgt)">'+wf.map(function(f){ return esc(f.text); }).join('<br>')+'</div>' : '')+'</div>';
 }
 function dmy(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()]+' '+d.getFullYear(); }
 function dmFull(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()]; }
