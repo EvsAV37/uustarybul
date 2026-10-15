@@ -6,7 +6,7 @@
   python3 server/test/browser.py /?go=cab --as 70000000001 --widths 390 --themes dark
   python3 server/test/browser.py / --as 70000000001 --click 'text=Кабинет' --click 'text=Настройки'
 
---as: гость не вошёл (по умолчанию) | anon (гость с сессией) | номер 7XXXXXXXXXX | admin (номер +7 000 000-00-03,
+--as: гость не вошёл (по умолчанию) | anon (гость с сессией) | номер 7XXXXXXXXXX | admin[:7XXXXXXXXXX] (по умолчанию +7 000 000-00-03,
 назначен администратором, пароль задан, управление открыто) | admin-locked (то же, но спросит пароль).
 Сессия кладётся в localStorage до загрузки страницы: приложение — sb-127-auth-token, управление — ub-admin-auth.
 Снимок — один экран, как на телефоне (--full — вся страница). Снимки — в server/test/.run/shots/, ошибки JS и неудачные запросы печатаются.
@@ -25,7 +25,8 @@ def session_for(spec):
         return None
     if isinstance(spec, str):
         spec = {'anon': True} if spec == 'anon' else \
-            {'phone': '70000000003', 'admin': True, 'unlock': spec != 'admin-locked'} if spec.startswith('admin') else \
+            {'phone': spec.split(':')[1] if ':' in spec else '70000000003', 'admin': True,
+             'unlock': not spec.startswith('admin-locked')} if spec.startswith('admin') else \
             {'phone': spec}
     req = urllib.request.Request(BASE + '/__test/session', data=json.dumps(spec).encode(),
                                  headers={'Content-Type': 'application/json'}, method='POST')

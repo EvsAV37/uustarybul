@@ -176,6 +176,8 @@ select.in{appearance:none;-webkit-appearance:none;padding-right:34px;background-
 .lim tbody tr:hover td{background:transparent}
 .bigv{font-size:30px;font-weight:700;letter-spacing:-.01em}
 .sets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.g2d{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dcard{display:flex;flex-direction:column;gap:6px;background:var(--sf);border-radius:14px;padding:14px}
+@media (max-width:899px){.g2d{grid-template-columns:minmax(0,1fr)}}
 
 /* Защита и журналы */
 #xbody{display:flex;flex-direction:column;gap:24px}
@@ -1150,10 +1152,17 @@ function pageSettings(){
     '<div class="dhead"><h1 class="h1">Настройки</h1><div class="sub">Каждое изменение пишется в журнал: кто, когда, что было и что стало</div></div>'+
     '<div id="sbody"><div class="skel" style="height:260px"></div></div>');
   var v = location.hash;
-  loadDirs().then(function(d){
+  Promise.all([
+    loadDirs(),
+    rpc('admin_settings'),
+    fetch('../docs/docs.json', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+    callVerify({action:'admin_config'}).catch(function(){ return null; })
+  ]).then(function(r){
     if(location.hash!==v) return;
+    var d = r[0], st = r[1]||{}, dj = r[2], cfg = r[3];
     var fp = d.free_pro||{}, until = fp.until, going = until && new Date(until) > new Date(), left = until ? daysLeft(until) : 0;
     $('sbody').innerHTML = '<div class="sets">'+
+      readinessCard(st, dj, cfg)+
       '<section class="card" aria-label="Бесплатный Про">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Бесплатный Про для всех</h2>'+(going?'<span class="chip grn">идёт</span>':'<span class="chip gry">закончился</span>')+'</div>'+
         (until ? '<div class="bigv">до '+dmy(until)+'</div>' : '<div class="d">Дата не задана</div>')+
@@ -1163,10 +1172,98 @@ function pageSettings(){
         (isOwner() ? '<button type="button" class="btn pr" id="fp_ext" style="align-self:flex-start">Продлить</button>' : '<div class="note">Менять может только владелец.</div>')+
         '<div class="d">Закончить раньше нельзя: в оферте (п. 3.6) обещано до этой даты, продлевать — можно.</div>'+
       '</section>'+
-      '<section class="card"><h2 class="h2">Ещё в настройках</h2><div class="d" style="line-height:1.5">Кто управляет, «Перед запуском» (тестовые номера, демо-мастера) и документы появятся в следующей части. Тарифы и лимиты — в разделе <a href="#dirs/limits">Справочники</a>.</div></section>'+
+      launchCard(st, cfg)+
+      adminsCard(st)+
+      docsCard(st, dj, until)+
       '</div>';
     var b = $('fp_ext'); if(b) b.onclick = function(){ extendFreePro(until); };
+    b = $('tl_off'); if(b) b.onclick = function(){
+      confirmBox('Выключить тестовые номера?', 'Вход с номеров +7 000 000-00-01, -02, -03 перестанет работать, их аккаунты удалятся вместе с профилями и карточками. Включить обратно кнопкой нельзя — только в SQL-редакторе.',
+        'Выключить и удалить', true, function(){
+          rpc('admin_test_logins_off').then(function(x){ toast('Тестовые номера выключены'+(x.accounts?' · удалено аккаунтов: '+x.accounts:'')); pageSettings(); }).catch(function(e){ toast(e.message); });
+        });
+    };
+    b = $('demo_del'); if(b) b.onclick = function(){ purgeDemo(st.demo||{}); };
   }).catch(function(err){ $('sbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+var DOCS_RU = { terms:'Соглашение', privacy:'Политика', consents:'Согласия', offer:'Оферта' };
+// Готовность к запуску: что ещё сделать, прежде чем звать заказчиков
+function readinessCard(st, dj, cfg){
+  var ops = st.ops||{}, w = ops.watch||{}, b = ops.backup||{}, adm = st.admins||[];
+  var gaps = dj ? dj.docs.reduce(function(a, x){ return a + x.gaps; }, 0) : null;
+  var items = [
+    ['Ключи Zvonok', cfg ? !!cfg.flash : null, cfg ? (cfg.flash ? 'звонок-сброс подключён'+(cfg.callback?', «позвоните нам» тоже':'') : 'не заданы'+(cfg.test_logins?' — вход только тестовыми номерами':'')) : 'не удалось проверить'],
+    ['Администратор с паролем', adm.length>0 && adm.every(function(a){ return a.has_password; }), adm.length ? adm.filter(function(a){ return !a.has_password; }).length ? 'у кого-то нет пароля' : 'у всех задан' : 'нет'],
+    ['Документы', dj ? (!dj.draft && gaps===0) : null, dj ? (dj.draft ? 'черновики' : 'утверждены')+(gaps ? ', пропусков: '+gaps : '') : 'не удалось открыть'],
+    ['Демо-мастера удалены', !(st.demo&&st.demo.masters), st.demo&&st.demo.masters ? 'осталось '+st.demo.masters : 'да'],
+    ['Тестовые номера выключены', cfg ? !cfg.test_logins : !!st.test_logins_off, (cfg ? cfg.test_logins : !st.test_logins_off) ? 'включены' : 'да'],
+    ['Копии базы', !!b.ok_at && Date.now()-new Date(b.ok_at) < 26*3600e3, b.ok_at ? 'последняя '+dm(b.ok_at) : 'нет'],
+    ['Сторож', !!w.checked_at && Date.now()-new Date(w.checked_at) < 15*60e3 && !(w.fails||[]).length, !w.checked_at ? 'ещё не проверял' : (w.fails||[]).length ? 'есть сбои' : 'работает']
+  ];
+  var done = items.filter(function(x){ return x[1]===true; }).length;
+  return '<section class="card" aria-label="Готовность к запуску">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Готовность к запуску</h2><span class="chip '+(done===items.length?'grn':'yel')+'">'+done+' из '+items.length+'</span></div>'+
+    '<div class="rows">'+items.map(function(x){
+      var ic = x[1]===true ? '<span class="chip grn" aria-label="готово">✓</span>' : x[1]===false ? '<span class="chip yel" aria-label="не готово">—</span>' : '<span class="chip gry">?</span>';
+      return '<div class="row"><span style="flex:1;min-width:0">'+esc(x[0])+'<span class="d" style="display:block">'+esc(x[2])+'</span></span>'+ic+'</div>'; }).join('')+'</div>'+
+    '<div class="d">Порядок — в плане работ, часть 2. Открывать для заказчиков, когда всё зелёное.</div></section>';
+}
+// Перед запуском: тестовые номера и демо-мастера (только владелец)
+function launchCard(st, cfg){
+  var off = st.test_logins_off, envOff = cfg && !cfg.test_logins && !off, dm0 = st.demo||{};
+  var tl = off ? '<span class="chip grn">выключены с '+dm(off)+'</span>' : envOff ? '<span class="chip grn">выключены на сервере</span>' : '<span class="chip yel">включены</span>';
+  return '<section class="card" aria-label="Перед запуском"><h2 class="h2">Перед запуском</h2>'+
+    '<div class="rows">'+
+      '<div class="row" style="flex-wrap:wrap;gap:8px"><span style="flex:1;min-width:0">Тестовые номера<span class="d" style="display:block">+7 000 000-00-01…03, код 1234, без звонка · аккаунтов: '+num(st.test_accounts)+'</span></span>'+tl+
+        (!off && !envOff && isOwner() ? '<button type="button" class="btn dg" id="tl_off" style="flex-basis:100%">Выключить и удалить тестовые аккаунты</button>' : '')+'</div>'+
+      '<div class="row" style="flex-wrap:wrap;gap:8px"><span style="flex:1;min-width:0">Демо-мастера<span class="d" style="display:block">'+(dm0.masters ? num(dm0.masters)+' '+plural(dm0.masters,'мастер','мастера','мастеров')+', '+num(dm0.spheres)+' '+plural(dm0.spheres,'направление','направления','направлений')+', '+num(dm0.reviews)+' '+plural(dm0.reviews,'отзыв','отзыва','отзывов')+' · помечены «Демо»' : 'вымышленные мастера Олёкминска')+'</span></span>'+
+        (dm0.masters ? '<span class="chip yel">есть</span>' : '<span class="chip grn">удалены</span>')+
+        (dm0.masters && isOwner() ? '<button type="button" class="btn dg" id="demo_del" style="flex-basis:100%">Удалить всех</button>' : '')+'</div>'+
+    '</div>'+
+    (isOwner() ? '<div class="d">Оба действия без возврата и пишутся в журнал.</div>' : '<div class="note">Менять может только владелец.</div>')+'</section>';
+}
+function purgeDemo(dm0){
+  sheet('<h2>Удалить всех демо-мастеров?</h2><p>'+num(dm0.masters)+' '+plural(dm0.masters,'мастер','мастера','мастеров')+' вместе с направлениями, фото и отзывами. Вернуть нельзя. Чтобы подтвердить, впишите слово УДАЛИТЬ.</p>'+
+    '<label class="field">Подтверждение<input id="dd_in" class="inp" autocomplete="off" autocapitalize="characters" placeholder="УДАЛИТЬ"></label>'+
+    '<button type="button" class="btn big dg" id="dd_ok" disabled>Удалить</button><button type="button" class="btn big" data-close>Отмена</button>',
+    function(){
+      var inp = $('dd_in'), ok = $('dd_ok');
+      inp.oninput = function(){ ok.disabled = inp.value.trim().toUpperCase()!=='УДАЛИТЬ'; };
+      ok.onclick = function(){
+        ok.disabled = true;
+        rpc('admin_demo_purge', {p_confirm: inp.value.trim().toUpperCase()}).then(function(x){ closeSheet(); toast('Удалено мастеров: '+x.masters); pageSettings(); })
+          .catch(function(e){ ok.disabled = false; toast(e.message); });
+      };
+    });
+}
+// Кто управляет — только просмотр; назначать и снимать — в SQL-редакторе
+function adminsCard(st){
+  var a = st.admins||[];
+  return '<section class="card" aria-label="Кто управляет"><h2 class="h2">Кто управляет</h2><div class="rows">'+
+    (a.length ? a.map(function(x){
+      return '<div class="row"><span style="flex:1;min-width:0"><b>'+esc(x.phone||'')+'</b>'+(x.me?' <span class="d">· это вы</span>':'')+
+        '<span class="d" style="display:block">'+(x.has_password?'пароль задан':'пароля нет')+' · '+(x.last_login?'входил '+dm(x.last_login):'ещё не входил')+'</span></span>'+
+        '<span class="chip gry">'+(x.role==='owner'?'владелец':'модератор')+'</span></div>'; }).join('') : '<div class="d">Никого</div>')+'</div>'+
+    '<div class="d" style="line-height:1.5">Назначить или снять — в SQL-редакторе панели Supabase: <code>select admin_grant(\'+7 …\')</code> / <code>select admin_revoke(\'+7 …\')</code>.</div></section>';
+}
+// Документы: редакция, пропуски, согласия на эту редакцию
+function docsCard(st, dj, until){
+  if(!dj) return '<section class="card"><h2 class="h2">Документы</h2><div class="d">Не удалось открыть сводку документов.</div></section>';
+  var cons = st.consents||[], cnt = function(k, cur){ return cons.filter(function(c){ return c.kind===k && (cur ? c.version===dj.version : c.version!==dj.version); }).reduce(function(a, c){ return a + c.people; }, 0); };
+  var old = function(k){ var n = cnt(k, false); return n ? ' · по старым редакциям: '+num(n) : ''; };
+  var who = {
+    terms: 'Приняли эту редакцию: '+num(cnt('terms', true))+old('terms'),
+    privacy: 'Принимается вместе с Соглашением: '+num(cnt('terms', true)),
+    consents: 'На обработку: '+num(cnt('pd_processing', true))+' · на показ в объявлениях: '+num(cnt('pd_distribution', true))+' · на отзыв с именем: '+num(cnt('pd_distribution_review', true)),
+    offer: 'Принимается при оплате Про'+(until && new Date(until) > new Date() ? ' — до '+dmy(until)+' Про бесплатно' : '')
+  };
+  return '<section class="card" aria-label="Документы" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Документы</h2><span class="d">версия согласий '+esc(dj.version)+'</span></div>'+
+    '<div class="g2d">'+dj.docs.slice().sort(function(a, b){ return Object.keys(DOCS_RU).indexOf(a.key) - Object.keys(DOCS_RU).indexOf(b.key); }).map(function(x){
+      return '<div class="dcard"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(DOCS_RU[x.key]||x.key)+'</b>'+(dj.draft?'<span class="chip yel">черновик</span>':'<span class="chip grn">действует</span>')+'</div>'+
+        '<div class="d">Редакция от '+esc(x.edition||'—')+' · '+(x.gaps ? '<span style="color:var(--warn)">пропусков: '+x.gaps+'</span>' : 'пропусков нет')+'</div>'+
+        '<div class="d">'+esc(who[x.key]||'')+'</div>'+
+        '<a class="btn sm" href="../docs/'+esc(x.key)+'.html" target="_blank" rel="noopener" style="align-self:flex-start">Открыть</a></div>'; }).join('')+'</div>'+
+    '<div class="d">Тексты правит Claude. Когда документы утверждены — пометка «Черновик» снимается, версия согласий поднимается, и люди дают согласие на новую редакцию.</div></section>';
 }
 function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function ymdText(s){ var p=s.split('-'); return Number(p[2])+' '+MG[Number(p[1])-1]+' '+p[0]; }

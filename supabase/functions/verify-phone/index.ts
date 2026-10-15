@@ -171,7 +171,12 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('ZVONOK_PUBLIC_KEY') || '';
     const flash = Deno.env.get('ZVONOK_CAMPAIGN_FLASH') || '';
     const callback = Deno.env.get('ZVONOK_CAMPAIGN_CALLBACK') || '';
-    const testsOn = Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
+    // Тестовые номера выключаются секретом DISABLE_TEST_LOGINS=1 или кнопкой в управлении (app_settings.test_logins_off)
+    let testsOn = Deno.env.get('DISABLE_TEST_LOGINS') !== '1';
+    if (testsOn) {
+      const { data: st } = await admin.from('app_settings').select('test_logins_off').limit(1).maybeSingle();
+      if (st?.test_logins_off) testsOn = false;
+    }
 
     if (action === 'challenge') return json({ ok: true, ...(await newChallenge()) });
 

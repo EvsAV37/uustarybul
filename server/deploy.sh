@@ -132,7 +132,7 @@ echo "дата бесплатного Про: ${FREE_PRO:-нет}"
 if ( cd "$REL" && UB_SB_KEY="$ANON" UB_FREE_PRO="$FREE_PRO" UB_VENDOR_DIR="$UB/vendor" python3 build.py >/dev/null 2>&1 ); then
   rsync -a --delete \
     --include=/index.html --include=/manifest.webmanifest --include=/sw.js \
-    --include=/admin/ --include=/admin/index.html --include=/icons/ --include='/icons/**' --include=/fonts/ --include='/fonts/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' \
+    --include=/admin/ --include=/admin/index.html --include=/icons/ --include='/icons/**' --include=/fonts/ --include='/fonts/**' --include=/docs/ --include='/docs/*.html' --include='/docs/*.css' --include='/docs/*.json' \
     --exclude='*' "$REL/" "$UB/site/"
   echo "выложен ($(du -sh "$UB/site" | cut -f1))"
 else bad "сборка build.py не прошла"; fi
@@ -163,7 +163,7 @@ for n in range(c["maxnumber"] + 1):
     if hashlib.sha256((c["salt"] + str(n)).encode()).hexdigest() == c["challenge"]:
         print(json.dumps({k: c[k] for k in ("algorithm", "challenge", "salt", "signature")} | {"number": n})); break'; }
 auth() { curl -s -m 20 --resolve "$HOSTN:443:127.0.0.1" -X POST -H 'Content-Type: application/json' -H "apikey: $ANON" ${3:+-H "Authorization: Bearer $3"} -d "$2" "$URL/auth/v1/$1"; }
-if ! grep -q '^DISABLE_TEST_LOGINS=1' functions.env 2>/dev/null; then
+if ! grep -q '^DISABLE_TEST_LOGINS=1' functions.env 2>/dev/null && [ "$(psql_db -At -c 'select test_logins_off is null from public.app_settings limit 1' 2>/dev/null)" = t ]; then
   p=$(pow); r1=$(vp "$(jq -cn --argjson p "${p:-null}" '{action:"start",phone:"+7 000 000-00-01",pow:$p}')")
   r2=$(vp '{"action":"confirm","phone":"+7 000 000-00-01","code":"1234"}')
   th=$(printf '%s' "$r2" | jq -r '.token_hash // empty' 2>/dev/null)
