@@ -1,6 +1,6 @@
 # Сборка index.html из src/ — один файл со встроенной библиотекой Supabase.
-# Запуск: python3 build.py   (нужен python3; npm не обязателен)
-# Для своего сервера: UB_SB_KEY=<anon key> python3 build.py — API на том же адресе, что и сайт.
+# Для своего сервера: UB_SB_KEY=<anon key> python3 build.py — приложение (index.html, admin/), API на том же адресе, что и сайт.
+# Без ключа (python3 build.py перед коммитом): документы docs/*.html, docs/docs.json и index.html-перенаправление для GitHub Pages.
 # UB_VENDOR_DIR — где хранить скачанную библиотеку (по умолчанию ./vendor).
 import os, subprocess, tarfile, shutil, urllib.request, io
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -43,8 +43,28 @@ lib = lib.replace(old, 'if(!e)e="https://localhost/";').replace('</script', '<\\
 import base64
 logo = 'data:image/webp;base64,' + base64.b64encode(open(os.path.join(ROOT, 'icons', 'logo-mark.webp'), 'rb').read()).decode()
 src = src.replace('/*LOGO_MARK*/', logo)  # знак заставки встроен в страницу — готов к первому кадру
-open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf8').write(src.replace('/*SUPABASE_UMD*/', lib))
-print('index.html собран')
+# Без UB_SB_KEY — сборка для GitHub Pages (старый прототип на облачном Supabase): с 15.10.2026 вместо приложения
+# там перенаправление на uustarybul.ru (ссылки ?m=…, ?doc=… сохраняются). Приложение собирается только для своего сервера.
+REDIRECT = '''<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Уустары бул</title>
+<link rel="canonical" href="https://uustarybul.ru/">
+<meta http-equiv="refresh" content="3;url=https://uustarybul.ru/">
+<style>body{margin:0;font:16px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;display:grid;place-items:center;min-height:100vh;background:#1A1B1F;color:#F5F5F7;text-align:center}a{color:inherit}</style>
+</head><body><p>Уустары бул переехал на <a id="go" href="https://uustarybul.ru/">uustarybul.ru</a></p>
+<script>
+var to = 'https://uustarybul.ru/' + location.search + location.hash;
+document.getElementById('go').href = to;
+// старое приложение, установленное с этого адреса, больше не нужно: снимаем его service worker
+var go = function(){ location.replace(to); };
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); }).then(go, go);
+  setTimeout(go, 800);
+} else go();
+</script></body></html>
+'''
+open(os.path.join(ROOT, 'index.html'), 'w', encoding='utf8').write(src.replace('/*SUPABASE_UMD*/', lib) if SB_KEY else REDIRECT)
+print('index.html собран' if SB_KEY else 'index.html: перенаправление на uustarybul.ru (для GitHub Pages)')
 
 # Управление: src/admin.html → admin/index.html (отдельная страница, код админки не попадает к заказчикам).
 # Собирается только для своего сервера (UB_SB_KEY): в облачном прототипе функций админки нет.
@@ -77,6 +97,7 @@ a.back{{display:inline-flex;align-items:center;height:44px;font-size:16px;font-w
 <link rel="stylesheet" href="../fonts/onest.css">
 <link rel="stylesheet" href="doc.css">
 </head>
+<script>if(/github\\.io$/.test(location.hostname))location.replace('https://uustarybul.ru/docs/'+location.pathname.split('/').pop()+location.hash)</script>
 <body><main><a class="back" href="../">‹ Уустары бул</a>
 <article class="doc">
 {draft}{body}
