@@ -97,8 +97,9 @@ start() {
   if ! pid_alive gateway; then
     nohup python3 "$HERE/gateway.py" serve >"$RUN/logs/gateway.log" 2>&1 & echo $! >"$RUN/gateway.pid"
   fi
-  for _ in $(seq 1 50); do curl -fsS -o /dev/null http://127.0.0.1:8000/rest/v1/cities?select=id \
-      -H "apikey: $(python3 "$HERE/gateway.py" keys | sed -n 's/^anon=//p')" 2>/dev/null && { echo "start: http://127.0.0.1:8000 (сайт), /admin, /rest/v1, /auth/v1, /functions/v1"; return 0; }
+  local anon; anon="$(python3 "$HERE/gateway.py" keys | sed -n 's/^anon=//p')"
+  for _ in $(seq 1 50); do curl -fsS -o /dev/null http://127.0.0.1:8000/rest/v1/cities?select=id -H "apikey: $anon" 2>/dev/null \
+      && curl -fsS -o /dev/null -X POST -d '{"action":"challenge"}' http://127.0.0.1:8000/functions/v1/verify-phone 2>/dev/null && { echo "start: http://127.0.0.1:8000 (сайт), /admin, /rest/v1, /auth/v1, /functions/v1"; return 0; }
     sleep 0.2; done
   echo "start: шлюз не отвечает — см. $RUN/logs/"; status; exit 1
 }

@@ -1,0 +1,101 @@
+#!/bin/bash
+# Уустары бул — свои копии базы (план, шаг 3). Ставит deploy.sh в /usr/local/sbin, запускает таймер ub-backup.timer.
+#   ub-backup nightly       — копия базы; по воскресеньям (по Якутску) ещё и пробное восстановление
+#   ub-backup dump          — только копия
+#   ub-backup restore-test  — восстановить последнюю копию во временную базу, сверить числа строк, удалить базу
+#   ub-backup status        — список копий
+# Копии: /opt/ub/backups/db-ГГГГ-ММ-ДД-ЧЧММ.dump (pg_dump -Fc всей базы postgres), хранятся 7 последних.
+# Как вернуть данные из копии — server/README-backup.md.
+# Итоги пишутся в ops.log — их показывает «Система» в управлении. В вывод — только числа, без персональных данных.
+set -uo pipefail
+DIR=${UB_BACKUP_DIR:-/opt/ub/backups}
+KEEP=7
+TEST_DB=ub_restore_test
+# таблицы для сверки после восстановления
+TABLES="public.categories public.cities public.profiles public.spheres public.services public.photos public.reviews public.complaints public.consents auth.users storage.objects"
+
+# UB_BACKUP_LOCAL=1 — проверка в среде Claude (server/test): база не в Docker, а локальная (сокет /tmp, порт 5544)
+if [ -n "${UB_BACKUP_LOCAL:-}" ]; then
+  PGB=/usr/lib/postgresql/16/bin; dbx() { local c=$1; shift; "$PGB/$c" "$@"; }; HOST=(-h /tmp -p "${UB_PGPORT:-5544}")
+else
+  dbx() { docker exec -i supabase-db "$@"; }; HOST=(-h localhost)
+fi
+psu()  { dbx psql -X -q -At -v ON_ERROR_STOP=1 "${HOST[@]}" -U supabase_admin -d "${1:-postgres}" "${@:2}"; }
+note() { # kind ok detail_json
+  psu postgres -c "insert into ops.log (kind, ok, detail) values ('$1', $2, '$3'::jsonb)" >/dev/null 2>&1 || true
+}
+counts() { # база → «таблица=число …»
+  local q="" t
+  for t in $TABLES; do q="$q union all select '$t', count(*) from $t"; done
+  psu "$1" -F= -c "${q# union all }" 2>/dev/null | tr '\n' ' '
+}
+hsize() { awk -v b="$1" 'BEGIN{ if (b < 1048576) printf "%.0f КБ", b/1024; else printf "%.1f МБ", b/1048576 }' | tr . ,; }
+
+dump() {
+  install -d -m 700 "$DIR"
+  local f="$DIR/db-$(TZ=Asia/Yakutsk date +%F-%H%M).dump" err
+  if ! err=$(dbx pg_dump "${HOST[@]}" -U supabase_admin -d postgres -Fc -Z 6 2>&1 >"$f.part"); then
+    rm -f "$f.part"; echo "копия: ОШИБКА pg_dump: $(printf '%s' "$err" | tail -2 | cut -c1-200)"
+    note backup false '{"error":"pg_dump"}'; return 1
+  fi
+  # копия читается и в ней есть данные таблиц
+  local toc; toc=$(dbx pg_restore -l < "$f.part" 2>/dev/null | grep -c 'TABLE DATA' || true)
+  if [ "${toc:-0}" -lt 10 ]; then
+    rm -f "$f.part"; echo "копия: ОШИБКА — файл не читается (таблиц с данными: ${toc:-0})"
+    note backup false '{"error":"toc"}'; return 1
+  fi
+  mv "$f.part" "$f"; chmod 600 "$f"
+  counts postgres > "$f.counts"; chmod 600 "$f.counts"
+  ls -1t "$DIR"/db-*.dump 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do rm -f "$old" "$old.counts"; done
+  local size n; size=$(stat -c %s "$f"); n=$(ls -1 "$DIR"/db-*.dump | wc -l)
+  echo "копия: $(basename "$f"), $(hsize "$size"), таблиц с данными $toc, хранится копий: $n"
+  note backup true "{\"size\":$size,\"copies\":$n,\"tables\":$toc}"
+}
+
+restore_test() {
+  local f; f=$(ls -1t "$DIR"/db-*.dump 2>/dev/null | head -1)
+  [ -n "$f" ] || { echo "проверка восстановления: копий нет"; note restore_test false '{"error":"no_dump"}'; return 1; }
+  psu postgres -c "drop database if exists $TEST_DB" >/dev/null 2>&1
+  psu postgres -c "create database $TEST_DB" >/dev/null || { echo "проверка восстановления: не создать временную базу"; note restore_test false '{"error":"createdb"}'; return 1; }
+  # расширения, на которые ссылаются наши таблицы и функции (в Supabase живут в схеме extensions)
+  psu "$TEST_DB" -c 'create schema if not exists auth; create schema if not exists storage; create schema if not exists extensions; create extension if not exists pg_trgm schema extensions;
+                     create extension if not exists pgcrypto schema extensions; create extension if not exists "uuid-ossp" schema extensions;' >/dev/null 2>&1
+  # Наши данные: public, auth (аккаунты), storage (записи о файлах). Служебные схемы Supabase (cron, vault, realtime…)
+  # в другую базу не восстанавливаются — их и не проверяем.
+  local log warn
+  log=$(dbx pg_restore "${HOST[@]}" -U supabase_admin -d "$TEST_DB" --no-owner --no-acl -n public -n auth -n storage < "$f" 2>&1)
+  warn=$(printf '%s\n' "$log" | grep -c '^pg_restore: error:' || true)
+  local got want ok=1 t a b diff
+  got=$(counts "$TEST_DB"); want=$(cat "$f.counts" 2>/dev/null)
+  for t in $TABLES; do
+    a=$(printf '%s\n' $want | sed -n "s|^$t=||p"); b=$(printf '%s\n' $got | sed -n "s|^$t=||p")
+    if [ -z "$b" ]; then ok=0; echo "  $t: нет после восстановления"; continue; fi
+    [ -z "$a" ] && continue
+    # копия и подсчёт сделаны не в одно мгновение — допускаем 1% или 2 строки разницы
+    diff=$(( a > b ? a - b : b - a ))
+    if [ "$diff" -gt 2 ] && [ $((diff * 100)) -gt "$a" ]; then ok=0; echo "  $t: в копии $b, ожидалось ~$a"; fi
+  done
+  psu postgres -c "drop database if exists $TEST_DB" >/dev/null 2>&1
+  local summary; summary=$(printf '%s\n' $got | sed 's/^public\.//; s/^auth\.users/accounts/; s/^storage\.objects/files/' | tr '\n' ' ')
+  if [ $ok = 1 ]; then
+    echo "проверка восстановления: ок ($(basename "$f"); ${summary% }; предупреждений pg_restore: $warn)"
+    note restore_test true "{\"warnings\":$warn}"
+  else
+    echo "проверка восстановления: ОШИБКА ($(basename "$f"); предупреждений pg_restore: $warn)"
+    printf '%s\n' "$log" | grep '^pg_restore: error:' | head -5 | cut -c1-200
+    note restore_test false "{\"warnings\":$warn}"
+    return 1
+  fi
+}
+
+case "${1:-nightly}" in
+  dump) dump ;;
+  restore-test) restore_test ;;
+  all) dump && restore_test ;;
+  nightly)
+    dump || exit 1
+    [ "$(TZ=Asia/Yakutsk date +%u)" = 7 ] && restore_test
+    exit 0 ;;
+  status) ls -lh "$DIR"/db-*.dump 2>/dev/null | awk '{print $5, $9}' ;;
+  *) sed -n '2,9p' "$0"; exit 2 ;;
+esac

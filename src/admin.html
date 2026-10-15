@@ -302,6 +302,24 @@ function ava(m, size, radius){
 var MG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 var MS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','нояб','дек'];
 function dm(iso){ var d=new Date(iso); return d.getDate()+' '+MS[d.getMonth()]; }
+// «Система»: копии базы и проверка восстановления (ub-backup на сервере, журнал ops.log)
+function opsRows(s){
+  var b = s.backup||{}, r = s.restore||{}, now = Date.now(), H = 3600e3;
+  var mb = function(n){ return n==null ? '' : ' · '+(n<1048576 ? Math.max(1,Math.round(n/1024))+' КБ' : (n/1048576).toFixed(1).replace('.',',')+' МБ'); };
+  var when = function(iso){ var d=new Date(iso), t=new Date(); var hm=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    if(d.toDateString()===t.toDateString()) return 'сегодня '+hm;
+    t.setDate(t.getDate()-1); if(d.toDateString()===t.toDateString()) return 'вчера '+hm;
+    return dm(iso); };
+  var bad = function(ok, fail){ return fail && (!ok || new Date(fail) > new Date(ok)); };
+  var bc = !b.ok_at ? '<span class="chip red">нет копий</span>'
+    : bad(b.ok_at, b.fail_at) ? '<span class="chip red">ошибка '+when(b.fail_at)+'</span>'
+    : '<span class="chip '+(now-new Date(b.ok_at) > 26*H ? 'yel' : 'grn')+'">'+when(b.ok_at)+mb(b.size)+'</span>';
+  var rc = !r.ok_at && !r.fail_at ? '<span class="chip gry">ещё не было</span>'
+    : bad(r.ok_at, r.fail_at) ? '<span class="chip red">ошибка '+when(r.fail_at)+'</span>'
+    : '<span class="chip '+(now-new Date(r.ok_at) > 8*24*H ? 'yel' : 'grn')+'">'+when(r.ok_at)+'</span>';
+  return '<div class="row"><span style="flex:1">Копия базы</span>'+bc+'</div>'+
+         '<div class="row"><span style="flex:1">Проверка копии</span>'+rc+'</div>';
+}
 function dmy(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()]+' '+d.getFullYear(); }
 function dmFull(iso){ var d=new Date(iso); return d.getDate()+' '+MG[d.getMonth()]; }
 function hm(iso){ var d=new Date(iso); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
@@ -697,6 +715,7 @@ function pageOverview(){
       '<a class="row" href="#security"><span style="flex:1">Аккаунты на удаление</span>'+(s.deletions?'<span class="chip gry">'+s.deletions+'</span>':'<span class="chip grn">нет</span>')+'</a>'+
       '<a class="row" href="#security/pd"><span style="flex:1">Запросы по ПДн</span>'+(s.pd_open?'<span class="chip '+(pdd.length?'red':'yel')+'">'+s.pd_open+'</span>':'<span class="chip grn">нет</span>')+'</a>'+
       (s.free_pro_until ? '<a class="row" href="#settings"><span style="flex:1">Бесплатный Про</span><span class="chip gry">до '+dm(s.free_pro_until)+' '+new Date(s.free_pro_until).getFullYear()+'</span></a>' : '')+
+      opsRows(s)+
       '</div></section>';
     var main = $('main'), keep = main.querySelector('.ptop').outerHTML + main.querySelector('.dhead').outerHTML + $('perB').outerHTML;
     main.innerHTML = keep + tiles + chart + '<div class="cards3">'+needs+misses+sys+'</div>';

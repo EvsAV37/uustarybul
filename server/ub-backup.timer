@@ -1,0 +1,11 @@
+# Уустары бул — копия базы каждую ночь в 03:40 по Якутску (по воскресеньям ещё пробное восстановление).
+[Unit]
+Description=Uustary bul: nightly database backup
+
+[Timer]
+OnCalendar=*-*-* 03:40:00 Asia/Yakutsk
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

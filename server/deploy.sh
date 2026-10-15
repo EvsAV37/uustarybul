@@ -1,6 +1,6 @@
 #!/bin/bash
 # Уустары бул — выкладка версии на сервер. Запускает ub-run (от root) из распакованного архива коммита.
-#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban)
+#   1. настройки сервера (compose, Caddyfile, ub-run, ub-secret, fail2ban, таймеры: дата Про, копии базы)
 #   2. серверные функции (supabase/functions/*)
 #   3. миграции базы: server/db/*.sql, затем supabase/migrations/*.sql — каждая один раз (ops.migrations)
 #   4. server/run.sql — разовые запросы/загрузки: выполняется, если файл изменился
@@ -26,15 +26,18 @@ step "1. Настройки сервера"
 recreate=0; caddy=0
 if ! cmp -s "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; then cp "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; recreate=1; echo "обновлён docker-compose.ub.yml"; fi
 if ! cmp -s "$REL/server/Caddyfile" ub/Caddyfile; then cp "$REL/server/Caddyfile" ub/Caddyfile; caddy=1; echo "обновлён Caddyfile"; fi
-for t in ub-run ub-secret ub-free-pro-sync; do
+for t in ub-run ub-secret ub-free-pro-sync ub-backup; do
   cmp -s "$REL/server/$t" "/usr/local/sbin/$t" || { install -m 755 "$REL/server/$t" "/usr/local/sbin/$t"; echo "обновлён $t"; }
 done
 # таймер: дата бесплатного Про в сайте = дата в базе (раз в 5 минут)
+# таймер: копия базы каждую ночь (ub-backup, план, шаг 3)
 units=0
-for u in ub-free-pro-sync.service ub-free-pro-sync.timer; do
+for u in ub-free-pro-sync.service ub-free-pro-sync.timer ub-backup.service ub-backup.timer; do
   cmp -s "$REL/server/$u" "/etc/systemd/system/$u" || { install -m 644 "$REL/server/$u" "/etc/systemd/system/$u"; units=1; echo "обновлён $u"; }
 done
-if [ $units = 1 ]; then systemctl daemon-reload && systemctl enable -q --now ub-free-pro-sync.timer || bad "таймер ub-free-pro-sync не включился"; fi
+if [ $units = 1 ]; then
+  systemctl daemon-reload && systemctl enable -q --now ub-free-pro-sync.timer ub-backup.timer || bad "таймеры не включились"
+fi
 # адреса из server/site.env
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*$|$1=$2|" .env; else printf '%s=%s\n' "$1" "$2" >> .env; fi; }
 SITE=$(grep '^SITE_DOMAIN=' "$REL/server/site.env" | cut -d= -f2-)
@@ -117,6 +120,11 @@ if [ -f "$REL/server/run.sql" ]; then
   fi
 else echo "нет"; fi
 
+# Первая копия базы и проверка восстановления — сразу, если копий ещё нет (дальше — таймер ночью)
+if ! ls /opt/ub/backups/db-*.dump >/dev/null 2>&1; then
+  echo "-- первая копия базы:"; /usr/local/sbin/ub-backup all || bad "копия базы или проверка восстановления не прошла"
+fi
+
 step "5. Сайт"
 # дата бесплатного Про — в страницу, чтобы кабинет сразу показывал верный текст (в ISO, как отдаёт API)
 FREE_PRO=$(psql_db -At -c "select coalesce(to_json(free_pro_until)#>>'{}', '') from public.app_settings limit 1" 2>/dev/null || true)
@@ -145,9 +153,20 @@ if [ $FAIL = 1 ]; then
   echo "-- снаружи: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL/" 2>&1)"
 fi
 systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
+last=$(ls -1t /opt/ub/backups/db-*.dump 2>/dev/null | head -1)
+if [ -n "$last" ]; then
+  echo "копии базы: $(ls -1 /opt/ub/backups/db-*.dump | wc -l), последняя $(basename "$last") ($(du -h "$last" | cut -f1)); таймер: $(systemctl is-active ub-backup.timer)"
+  [ -n "$(find "$last" -mmin -1600)" ] || bad "последней копии базы больше суток"
+else bad "копий базы нет"; fi
 f2b_n() { fail2ban-client status "$1" 2>/dev/null | sed -n 's/.*Currently banned:[[:space:]]*//p'; }
 if systemctl is-active -q fail2ban && [ -n "$(f2b_n sshd)" ] && [ -n "$(f2b_n ub-studio)" ]; then
   echo "fail2ban: работает, сейчас заблокировано — SSH $(f2b_n sshd), панель $(f2b_n ub-studio)"
+  # неверный пароль панели с самого сервера → строка в журнале Caddy → её видит фильтр fail2ban
+  sl=/var/log/ub-caddy/studio.log; n0=$(wc -l < "$sl" 2>/dev/null || echo 0)
+  curl -s -o /dev/null -m 10 -u ub-check:wrong --resolve "$HOSTN:8443:127.0.0.1" "https://$HOSTN:8443/" || true
+  sleep 1; tmpl=$(mktemp); tail -n +$((n0 + 1)) "$sl" > "$tmpl" 2>/dev/null
+  m=$(fail2ban-regex "$tmpl" /etc/fail2ban/filter.d/ub-studio.conf 2>/dev/null | sed -n 's/^Lines: .*, \([0-9]*\) matched.*/\1/p'); rm -f "$tmpl"
+  [ "${m:-0}" -ge 1 ] && echo "панель: неверный пароль попадает в журнал и в фильтр fail2ban" || bad "панель: неверный пароль не виден fail2ban"
 else bad "fail2ban не работает"; fi
 free -m | awk '/Mem/{printf "память: занято %s из %s МБ\n",$3,$2}'
 df -h / | awk 'NR==2{printf "диск: занято %s из %s\n",$3,$2}'

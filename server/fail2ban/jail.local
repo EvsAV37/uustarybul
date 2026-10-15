@@ -6,7 +6,8 @@
 [DEFAULT]
 findtime = 10m
 bantime = 1h
-ignoreip = 127.0.0.1/8 ::1
+# свои: сам сервер и сети Docker (проверка выкладки ходит в панель с самого сервера)
+ignoreip = 127.0.0.1/8 ::1 172.16.0.0/12
 banaction = iptables-multiport
 banaction_allports = iptables-allports
 
