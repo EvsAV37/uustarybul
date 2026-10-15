@@ -109,6 +109,8 @@ h1,h2{text-wrap:balance}
 .svc .p{font-size:15px;font-weight:500;color:var(--v);white-space:nowrap;font-variant-numeric:tabular-nums}
 .review{background:var(--sf);border-radius:16px;padding:14px}
 .reply{border-left:2px solid var(--qt);padding-left:10px;margin-top:12px}
+.ist{font-size:13px;font-weight:600;color:var(--mu);white-space:nowrap}
+.ist.done{color:var(--ok)}
 .wide{display:flex;align-items:center;justify-content:center;height:46px;border-radius:14px;background:var(--pl);font-size:15px;font-weight:600;width:100%}
 .warn{display:flex;gap:10px;align-items:flex-start;background:var(--dgb);border-radius:16px;padding:14px;color:var(--dgt);font-size:14px;line-height:1.4}
 .photos{display:flex;gap:10px;overflow-x:auto;margin-right:-20px;padding-right:20px;scrollbar-width:none}
@@ -903,6 +905,7 @@ function contact(pid, sid, kind){
 }
 
 /* ---------- старт ---------- */
+var pendingIdeas = false;
 // Заставка: знак виден не меньше 2 с с момента появления (решено 14.10.2026; раньше считали от нажатия, и время уходило на загрузку), не дольше 3,5 с
 var splashEl = document.getElementById('splash');
 if(splashEl) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1A1B1F');
@@ -915,6 +918,7 @@ function hideSplash(){
 setTimeout(hideSplash, 3500);
 (function(){
   var m = /[?&]go=cab\b/.test(location.search);
+  if(/[?&]go=ideas\b/.test(location.search)){ view = {name:'settings'}; pendingIdeas = true; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
   var dd = /[?&]doc=(terms|privacy|consents|offer)\b/.exec(location.search);
   if(dd){ try{ history.replaceState(null, '', location.pathname); }catch(e){} setTimeout(function(){ openDoc(dd[1]); }, 0); }
@@ -925,10 +929,14 @@ if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('messa
   if(!e.data) return;
   if(e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
   else if(e.data.go==='home'){ closeSheet(); S.stack=[]; go({name:'home'}, false); }
+  else if(e.data.go==='ideas'){ closeSheet(); S.stack=[]; go({name:'settings'}, false); myIdeasScreen(); }
   else if(/^(terms|privacy|consents|offer)$/.test(e.data.doc||'')) openDoc(e.data.doc);
 });
 render();
-loadBase().then(render).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; }).then(hideSplash);
+loadBase().then(render).then(function(){
+  // ответ на предложение (push): открыть «Мои предложения», когда сессия уже известна
+  if(pendingIdeas) sb.auth.getSession().then(function(r){ S.session = r.data.session; pendingIdeas = false; myIdeasScreen(); });
+}).catch(function(e){ app.innerHTML='<h1 class="h1">Уустары бул</h1><div class="empty">'+esc(errText(e))+'</div>'; }).then(hideSplash);
 })();
 </script>
 </body>

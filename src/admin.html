@@ -352,6 +352,7 @@ var IC = {
   bell:'<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
   set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
   shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  idea:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   card:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/>',
   more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>'
@@ -381,7 +382,7 @@ function rpc(name, args){
     return r.data;
   });
 }
-var ERR = { not_found:'Не найдено', bad_action:'Недопустимое действие', bad_reason:'Выберите причину', admin_password_short:'Пароль — не короче 10 символов',
+var ERR = { not_found:'Не найдено', idea_status:'Выберите статус', idea_reply_long:'Ответ — до 500 символов', idea_already_pd:'Уже записано запросом по ПДн', bad_action:'Недопустимое действие', bad_reason:'Выберите причину', admin_password_short:'Пароль — не короче 10 символов',
   admin_password_wrong:'Старый пароль неверный', admin_no_session:'Войдите по номеру заново', admin_owner_required:'Менять может только владелец',
   cat_name:'Название — от 2 до 40 символов', cat_plural:'Множественное число — от 2 до 60 символов', cat_short:'Короткое название — до 20 символов',
   cat_grp:'Выберите или впишите группу', cat_sort:'Порядок — число от 0 до 9999', cat_keywords:'Слишком много слов для поиска', cat_hint:'Подсказка слишком длинная',
@@ -527,7 +528,7 @@ function boot(){
 }
 
 /* ---------- оболочка ---------- */
-var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['broadcast','Рассылка','bell'],['settings','Настройки','set'],['security','Защита и журналы','shield']];
+var NAV = [['overview','Обзор','over'],['masters','Мастера','masters'],['complaints','Жалобы и отзывы','compl'],['dirs','Справочники','dir'],['broadcast','Рассылка','bell'],['ideas','Предложения','idea'],['settings','Настройки','set'],['security','Защита и журналы','shield']];
 var LATER = [['Платежи','card','с 2027']];
 function citySelect(id){
   return '<label class="citysel"><span class="d" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Город</span><select id="'+id+'" aria-label="Город">'+
@@ -539,15 +540,16 @@ function shell(sec, html){
     citySelect('city')+
     '<nav class="nav" aria-label="Разделы">'+NAV.map(function(n){
       var extra = n[0]==='masters' && b.masters!=null ? '<span class="cnt">'+b.masters+'</span>' : n[0]==='complaints' && b.complaints ? '<span class="badge">'+b.complaints+'</span>'
-        : n[0]==='security' && b.pd_urgent ? '<span class="badge">'+b.pd_urgent+'</span>' : '';
+        : n[0]==='security' && b.pd_urgent ? '<span class="badge">'+b.pd_urgent+'</span>' : n[0]==='ideas' && b.ideas_new ? '<span class="badge">'+b.ideas_new+'</span>' : '';
       return '<a href="#'+n[0]+'" class="'+(sec===n[0]?'on':'')+'"'+(sec===n[0]?' aria-current="page"':'')+'>'+ic(n[2])+n[1]+extra+'</a>'; }).join('')+
     LATER.map(function(n){ return '<span class="na" title="Появится позже">'+ic(n[1])+n[0]+'<span class="cnt">'+n[2]+'</span></span>'; }).join('')+
     '</nav><div class="foot">'+themeSeg('sm')+
     '<span><b style="color:var(--fg)">'+esc(A.me.phone||'')+'</b> · '+(A.me.role==='owner'?'владелец':'модератор')+'</span>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap"><a href="../" target="_blank" rel="noopener" style="font-weight:600">Открыть приложение ›</a><button type="button" class="link" data-act="pw" style="font-weight:500;color:var(--mu)">Пароль</button><button type="button" class="link" data-act="lock" style="font-weight:500;color:var(--mu)">Выйти</button></div></div></aside>';
-  var tsec = sec==='dirs'||sec==='settings'||sec==='security'||sec==='broadcast' ? 'more' : sec;
+  var tsec = sec==='dirs'||sec==='settings'||sec==='security'||sec==='broadcast'||sec==='ideas' ? 'more' : sec;
   var tabs = '<nav class="tabs" aria-label="Разделы">'+[['overview','Обзор','over'],['complaints','Жалобы','compl'],['masters','Мастера','masters'],['more','Ещё','more']].map(function(n){
     var dot = n[0]==='complaints' && b.complaints ? '<span class="dot">'+b.complaints+'</span>' : n[0]==='more' && b.pd_urgent ? '<span class="dot">'+b.pd_urgent+'</span>' : '';
+    // новые предложения на телефоне — значок у строки в «Ещё», не на вкладке (вкладка — для срочного: сроки ПДн)
     return '<a href="#'+n[0]+'" class="'+(tsec===n[0]?'on':'')+'"'+(tsec===n[0]?' aria-current="page"':'')+'>'+ic(n[2],24)+n[1]+dot+'</a>'; }).join('')+'</nav>';
   $('app').innerHTML = '<div class="shell">'+side+'<main class="main" id="main">'+html+'</main>'+tabs+'</div>';
   var cs = $('city'); if(cs) cs.onchange = function(){ setCity(cs.value); };
@@ -573,6 +575,10 @@ function paintBadges(){
   document.querySelectorAll('[data-ct]').forEach(function(x){ var t = CT.filter(function(c){ return c[0]===x.getAttribute('data-ct'); })[0];
     var n = t[0]==='open' && b.complaints ? ' · '+b.complaints : t[0]==='reviews' && b.reviews_new ? ' · '+b.reviews_new : ''; x.textContent = t[1]+n; });
   var r=$('rvn'); if(r) r.textContent = b.reviews_new||0;
+  document.querySelectorAll('.nav a[href="#ideas"], [data-idn]').forEach(function(a){
+    var c = a.querySelector('.badge');
+    if(!b.ideas_new){ if(c) c.remove(); return; }
+    if(!c){ c=document.createElement('span'); c.className='badge'; if(a.hasAttribute('data-idn')) a.insertBefore(c, a.lastElementChild); else a.appendChild(c); } c.textContent = b.ideas_new; });
   document.querySelectorAll('.nav a[href="#security"], .tabs a[href="#more"], [data-pdu]').forEach(function(a){
     var cls = a.closest('.tabs') ? 'dot' : 'badge', c = a.querySelector('.'+cls);
     if(!b.pd_urgent){ if(c) c.remove(); return; }
@@ -644,6 +650,7 @@ function route(){
   if(sec==='dirs') return pageDirs(h[1]||null, h[2]||null);
   if(sec==='settings') return pageSettings();
   if(sec==='broadcast') return pageBroadcast();
+  if(sec==='ideas') return pageIdeas(id);
   if(sec==='security') return h[1]==='pd' ? pagePd(h[2]||null) : pageSecurity();
   return pageOverview();
 }
@@ -1650,6 +1657,91 @@ function renderBHist(items){
   }).join('');
 }
 
+/* ---------- Предложения от пользователей ---------- */
+// Само прикреплено: роль, город, устройство, версия. Номера нет. Ответ и «сделано» — служебный push автору.
+var IDK = {idea:'Идея', inconvenient:'Неудобно', broken:'Сломалось'};
+var IDS = [['new','Новые'],['read','Прочитанные'],['done','Сделанные'],['rejected','Отклонённые']];
+var IDS1 = {'new':'Новое', read:'Прочитано', done:'Сделано', rejected:'Отклонено'};
+function idChip(x){ return '<span class="chip '+(x.kind==='broken'?'red':x.kind==='inconvenient'?'yel':'gry')+'">'+esc(IDK[x.kind]||x.kind)+'</span>'; }
+function pageIdeas(id){
+  A.idtab = A.idtab || 'new';
+  var detail = !!id;
+  function seg(counts){ return '<div class="seg" role="group" aria-label="Предложения">'+IDS.map(function(t){ var n = counts && counts[t[0]];
+    return '<button type="button" data-it="'+t[0]+'" class="'+(A.idtab===t[0]?'on':'')+'" aria-pressed="'+(A.idtab===t[0])+'">'+t[1]+(n?' · '+n:'')+'</button>'; }).join('')+'</div>'; }
+  shell('ideas', (detail ? '' : ptop('Предложения', '#more'))+
+    '<div class="dhead" style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px"><div><h1 class="h1">Предложения</h1><div class="sub">Идеи и жалобы на работу приложения от вошедших по номеру · хранятся год</div></div><div id="isegA">'+seg()+'</div></div>'+
+    (detail ? '' : '<div class="ponly" id="isegB" style="overflow-x:auto">'+seg().replace('class="seg"','class="seg" style="display:flex"')+'</div>')+
+    '<div id="ibody"><div class="skel" style="height:320px"></div></div>');
+  function bindSeg(){ document.querySelectorAll('[data-it]').forEach(function(b){ b.onclick = function(){ A.idtab = b.getAttribute('data-it'); if(location.hash==='#ideas') pageIdeas(null); else location.hash='#ideas'; }; }); }
+  bindSeg();
+  var v = location.hash;
+  rpc('admin_ideas', {p_tab: detail ? 'all' : A.idtab, p_city: A.city}).then(function(res){
+    if(location.hash!==v) return;
+    $('isegA').innerHTML = seg(res.counts); var sb2=$('isegB'); if(sb2) sb2.innerHTML = seg(res.counts).replace('class="seg"','class="seg" style="display:flex"'); bindSeg();
+    var all = res.items||[];
+    var list = detail ? all.filter(function(x){ return x.status===A.idtab; }) : all;
+    var cur = id ? all.filter(function(x){ return String(x.id)===String(id); })[0] : null;
+    if(!cur && !id && window.matchMedia('(min-width:900px)').matches && list.length) cur = list[0];
+    var nav = '<nav class="dlist" aria-label="Предложения">'+
+      (list.length ? list.map(function(x){ var on = cur && cur.id===x.id;
+        return '<a class="di'+(on?' on':'')+'" href="#ideas/'+x.id+'"'+(on?' aria-current="true"':'')+'><span style="min-width:0;display:flex;flex-direction:column"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(x.status==='new'?';font-weight:600':'')+'">'+esc(x.body)+'</span><span class="d" style="font-weight:400">'+(x.role==='master'?'мастер':'заказчик')+(x.city?' · '+esc(x.city):'')+' · '+esc(dmy(x.created_at))+'</span></span><span class="tail">'+idChip(x)+'</span></a>'; }).join('')
+        : '<div class="empty">'+({'new':'Новых предложений нет.', read:'Прочитанных нет.', done:'Сделанных пока нет.', rejected:'Отклонённых нет.'})[A.idtab]+'</div>')+'</nav>';
+    var ed = cur ? ideaCard(cur) : (id ? '<section class="ed"><div class="empty">Предложение не найдено — возможно, удалено или старше года.</div></section>' : '');
+    $('ibody').innerHTML = '<div class="split '+(detail?'detail':'list')+'">'+nav+ed+'</div>';
+    if(cur) bindIdeaCard(cur);
+    // открыли новое — отметить «прочитано» (без уведомления автору)
+    if(cur && cur.status==='new') rpc('admin_idea_set', {p_id:cur.id, p_status:'read', p_reply:cur.reply}).then(function(){ cur.status='read'; loadBadges(); var st=$('id_st'); if(st) st.textContent = IDS1.read;
+      var c = res.counts||{}; c['new'] = Math.max(0,(c['new']||0)-1); c.read = (c.read||0)+1; $('isegA').innerHTML = seg(c); var b2=$('isegB'); if(b2) b2.innerHTML = seg(c).replace('class="seg"','class="seg" style="display:flex"'); bindSeg(); }).catch(function(){});
+  }).catch(function(err){ $('ibody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
+}
+function ideaCard(x){
+  var owner = isOwner();
+  return '<section class="ed" aria-label="Предложение">'+
+    '<div class="ptop"><a class="back" href="#ideas" aria-label="Назад к предложениям">‹</a><b class="ttl">'+esc(IDK[x.kind]||'')+'</b><span class="logo" role="img" aria-label="Знак Уустары бул"></span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 class="dhead" style="margin:0;font-size:24px;font-weight:700">'+esc(IDK[x.kind]||'')+'</h2><span class="d" id="id_st">'+esc(IDS1[x.status]||'')+'</span></div>'+
+    '<div class="cmp"><div style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:15px">'+esc(x.body)+'</div></div>'+
+    '<div class="rows">'+
+      '<div class="row"><span style="flex:1" class="d">Автор</span><span>'+(x.profile_id ? 'мастер <a href="#masters/'+x.profile_id+'" style="font-weight:600">'+esc(x.name||'')+'</a>' : 'заказчик')+'</span></div>'+
+      '<div class="row"><span style="flex:1" class="d">Город</span><span>'+esc(x.city||'—')+'</span></div>'+
+      '<div class="row"><span style="flex:1" class="d">Устройство</span><span>'+esc(x.device||'—')+(x.app_version?' · версия '+esc(x.app_version):'')+'</span></div>'+
+      '<div class="row"><span style="flex:1" class="d">Получено</span><span>'+esc(dmy(x.created_at))+'</span></div>'+
+      (x.pd_request_id ? '<div class="row"><span style="flex:1" class="d">Запрос по ПДн</span><a href="#security/pd/'+x.pd_request_id+'" style="font-weight:600">№ '+x.pd_request_id+' ›</a></div>' : '')+
+    '</div>'+
+    '<span class="lbl">Статус</span><div class="seg" role="radiogroup" aria-label="Статус" id="id_seg" style="display:flex;flex-wrap:wrap">'+IDS.slice(1).map(function(t){ return '<button type="button" role="radio" data-is="'+t[0]+'" class="'+(x.status===t[0]||(x.status==='new'&&t[0]==='read')?'on':'')+'" aria-checked="'+(x.status===t[0]||(x.status==='new'&&t[0]==='read'))+'">'+esc(IDS1[t[0]])+'</button>'; }).join('')+'</div>'+
+    '<label class="fl"><span>Ответ автору <small id="id_rc">'+String(x.reply||'').length+' / 500</small></span><textarea class="in" id="id_reply" maxlength="500" rows="3" placeholder="Коротко и по делу — автор увидит в «Моих предложениях»">'+esc(x.reply||'')+'</textarea></label>'+
+    '<div class="d" style="line-height:1.5;font-size:13px">Если ответ новый или статус «Сделано», автору придёт уведомление (у кого они включены). Только ответ на его сообщение — без рекламы.</div>'+
+    '<div class="acts"><button type="button" class="btn pr" id="id_save">Сохранить</button>'+
+      (owner && !x.pd_request_id ? '<button type="button" class="btn" id="id_pd">Сделать запросом по ПДн</button>' : '')+
+      (owner ? '<button type="button" class="btn dg" id="id_del">Удалить</button>' : '')+'</div>'+
+    '</section>';
+}
+function bindIdeaCard(x){
+  var st = x.status==='new' ? 'read' : x.status, ta = $('id_reply');
+  A.dirty = false;
+  document.querySelectorAll('[data-is]').forEach(function(b){ b.onclick = function(){
+    st = b.getAttribute('data-is'); A.dirty = true;
+    document.querySelectorAll('[data-is]').forEach(function(y){ var on = y===b; y.classList.toggle('on', on); y.setAttribute('aria-checked', on); }); }; });
+  ta.addEventListener('input', function(){ A.dirty = true; $('id_rc').textContent = ta.value.length+' / 500'; });
+  $('id_save').onclick = function(){ var b=$('id_save'); b.disabled=true;
+    rpc('admin_idea_set', {p_id:x.id, p_status:st, p_reply:ta.value}).then(function(r){
+      A.dirty = false; toast(r.push ? 'Сохранено · автору ушло уведомление' : 'Сохранено'); loadBadges();
+      if(st!==A.idtab) A.idtab = st;
+      pageIdeas(String(x.id));
+    }, function(err){ b.disabled=false; toast(err.message); }); };
+  var pd = $('id_pd'); if(pd) pd.onclick = function(){
+    sheet('<h2>Сделать запросом по ПДн</h2><p>Запишем в реестр «Защита и журналы → Запросы по ПДн»: дата получения — день отправки ('+esc(dmy(x.created_at))+'), заявитель — аккаунт автора. Срок ответа посчитается сам.</p>'+
+      '<label class="fl"><span>Что просят</span><select class="in" id="id_pk"><option value="">Выберите</option>'+['access','correct','delete','withdraw','stop','other'].map(function(k){ return '<option value="'+k+'">'+esc(PDK[k])+'</option>'; }).join('')+'</select></label>'+
+      '<p id="id_ph" class="d" style="font-size:13px;min-height:18px"></p>'+
+      '<button type="button" class="btn big pr" id="id_pok">Записать</button><button type="button" class="btn big" data-close>Отмена</button>',
+      function(){ var k=$('id_pk'); k.onchange = function(){ $('id_ph').textContent = PDH[k.value]||''; };
+        $('id_pok').onclick = function(){ if(!k.value) return toast('Выберите, что просят'); var b=$('id_pok'); b.disabled=true;
+          rpc('admin_idea_to_pd', {p_id:x.id, p_kind:k.value}).then(function(r){ closeSheet(); toast('Записано · срок '+dmd(r.due_on)); loadBadges(); location.hash = '#security/pd/'+r.id; },
+            function(err){ b.disabled=false; toast(err.message); }); }; });
+  };
+  var d = $('id_del'); if(d) d.onclick = function(){ confirmBox('Удалить предложение?', 'Автор тоже перестанет его видеть. Вернуть нельзя.', 'Удалить', true, function(){
+    rpc('admin_idea_delete', {p_id:x.id}).then(function(){ A.dirty=false; toast('Удалено'); loadBadges(); location.hash = '#ideas'; }, function(err){ toast(err.message); }); }); };
+}
+
 /* ---------- Ещё (телефон) ---------- */
 function pageMore(){
   if(window.matchMedia('(min-width:900px)').matches){ location.hash='#overview'; return; }
@@ -1658,6 +1750,7 @@ function pageMore(){
     '<div class="grp"><a class="it" href="#reviews" style="min-height:48px">'+ic('compl')+'<span style="flex:1">Новые отзывы</span><span class="d"><span id="rvn">'+(A.badges.reviews_new||0)+'</span> ›</span></a>'+
     '<a class="it" href="#dirs" style="min-height:48px">'+ic('dir')+'<span style="flex:1">Справочники</span><span class="d">›</span></a>'+
     '<a class="it" href="#broadcast" style="min-height:48px">'+ic('bell')+'<span style="flex:1">Рассылка</span><span class="d">›</span></a>'+
+    '<a class="it" href="#ideas" data-idn style="min-height:48px">'+ic('idea')+'<span style="flex:1">Предложения</span>'+(A.badges.ideas_new?'<span class="badge">'+A.badges.ideas_new+'</span>':'')+'<span class="d" style="margin-left:8px">›</span></a>'+
     '<a class="it" href="#settings" style="min-height:48px">'+ic('set')+'<span style="flex:1">Настройки</span><span class="d">›</span></a>'+
     '<a class="it" href="#security" data-pdu style="min-height:48px">'+ic('shield')+'<span style="flex:1">Защита и журналы</span><span class="d" style="margin-left:8px">›</span></a>'+
     LATER.map(function(n){ return '<div class="it" style="min-height:48px;color:var(--mu)">'+ic(n[1])+'<span style="flex:1">'+n[0]+'</span><span class="chip gry">'+n[2]+'</span></div>'; }).join('')+'</div>'+

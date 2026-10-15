@@ -56,6 +56,7 @@ function day(iso: unknown, tz: string): string {
 const DOC_KEYS = ['terms', 'privacy', 'consents', 'offer'];
 function openUrl(kind: string, p: Record<string, unknown>): string {
   if (kind === 'watch') return './admin/';   // сторож (ub-watch) — администраторам, открывает управление
+  if (kind === 'idea_reply') return './?go=ideas';   // ответ на предложение — «Мои предложения»
   if (kind !== 'broadcast') return OPEN_URL;
   const go = String(p.go || 'cab');
   if (go === 'home') return './';
@@ -96,6 +97,11 @@ function text(kind: string, p: Record<string, unknown>, tz: string): { title: st
       return { title: 'Профиль заблокирован', body: 'После проверки жалоб профиль скрыт из поиска. Подробности в кабинете.' };
     case 'watch': // сторож сервера (ub-watch → ops_watch_report): только администраторам
       return { title: String(p.title || 'Сторож').slice(0, 60), body: String(p.body || '').slice(0, 200) };
+    case 'idea_reply': { // ответ на предложение (служебное: ответ на обращение пользователя)
+      const reply = typeof p.reply === 'string' ? p.reply.slice(0, 120) : '';
+      if (p.status === 'done') return { title: 'Ваше предложение сделали', body: reply || 'Спасибо! Подробности — в «Моих предложениях».' };
+      return { title: 'Ответ на ваше предложение', body: reply || 'Посмотрите в «Моих предложениях».' };
+    }
     case 'broadcast': // рассылка из управления: текст пишет администратор (только служебное)
       return { title: String(p.title || 'Уустары бул').slice(0, 60), body: String(p.body || '').slice(0, 200) };
     default:

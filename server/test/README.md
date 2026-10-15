@@ -9,6 +9,7 @@ python3 server/test/smoke.py --browser
 python3 server/test/browser.py /admin/#security --as admin --widths 390,1440 --themes light,dark
 bash server/test/local.sh psql -c "select count(*) from public.profiles"
 bash server/test/local.sh sql check.sql   # проверки с откатом: begin; … rollback;
+python3 server/test/ideas_test.py        # «Предложить идею» (027): отправка, лимит, управление, push, ПДн, чистка
 bash server/test/local.sh site            # после правок src/ — пересобрать сайт
 bash server/test/local.sh db && bash server/test/local.sh restart   # после правок миграций — база заново
 ```

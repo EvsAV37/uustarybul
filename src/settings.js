@@ -23,6 +23,10 @@ function settingsView(){
 
     (canInstall() ? '<div class="sec-h">Приложение</div><div class="group"><button type="button" class="srow" id="sInst"><span>Установить на экран телефона</span><span class="v">'+chev+'</span></button></div>' : '')+
 
+    '<div class="sec-h">Обратная связь</div><div class="group">'+
+      '<button type="button" class="srow" id="sIdea"><span>Предложить идею</span><span class="v">'+chev+'</span></button>'+
+      (reg ? '<button type="button" class="srow" id="sMyIdeas"><span>Мои предложения</span><span class="v">'+chev+'</span></button>' : '')+
+    '</div>'+
     '<div class="sec-h">Документы</div><div class="group">'+DOCS.map(function(d){
       return '<button type="button" class="srow" data-doc="'+d[0]+'"><span>'+d[1]+'</span><span class="v">'+chev+'</span></button>'; }).join('')+'</div>'+
     '<div class="sec-h">Аккаунт</div><div class="group">'+
@@ -36,7 +40,7 @@ function settingsView(){
     '</div>'+
     (reg ? '<div class="note">Профиль и карточки скроются сразу, аккаунт удалится через 7 дней.</div>' : '')+
 
-    '<div class="foot">Уустары бул · версия 0.1<br>© 2026 Евсеев А.В. · Прототип, данные вымышленные</div>'+
+    '<div class="foot">Уустары бул · версия '+APP_VERSION+'<br>© 2026 Евсеев А.В. · Прототип, данные вымышленные</div>'+
     '</div>';
 
   document.getElementById('bk').onclick = back;
@@ -46,6 +50,8 @@ function settingsView(){
     app.querySelectorAll('[data-theme-opt]').forEach(function(x){ x.setAttribute('aria-checked', String(x===b)); });
   }; });
   var ib = document.getElementById('sInst'); if(ib) ib.onclick = installApp;
+  document.getElementById('sIdea').onclick = ideaScreen;
+  var mi = document.getElementById('sMyIdeas'); if(mi) mi.onclick = myIdeasScreen;
   var si = document.getElementById('sIn'); if(si) si.onclick = function(){ loginSheet(); };
   var so = document.getElementById('sOut'); if(so) so.onclick = function(){
     pushOff().then(function(){ return sb.auth.signOut(); }).then(function(){ toast('Вы вышли'); S.stack=[]; go({name:'home'}, false); });
@@ -131,6 +137,79 @@ function settingsView(){
       });
     }
     draw();
+  });
+}
+
+/* ---------- предложения (идея, неудобно, сломалось) ---------- */
+// Само прикрепляется: роль и город (решает база), тип телефона и браузера, версия приложения. Номер и IP — нет.
+var APP_VERSION = '0.1';
+var IDEA_KINDS = [['idea','Идея'],['inconvenient','Неудобно'],['broken','Что-то сломалось']];
+var IDEA_ST = {'new':'Отправлено', read:'Прочитано', done:'Сделано', rejected:'Отклонено'};
+function deviceShort(){
+  var ua = navigator.userAgent || '';
+  var os = isIOS() ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '';
+  var br = /YaBrowser|YaApp/.test(ua) ? 'Яндекс' : /Edg[A\/]/.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera'
+    : /Firefox|FxiOS/.test(ua) ? 'Firefox' : /SamsungBrowser/.test(ua) ? 'Samsung' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : '';
+  if(isStandalone()) br = 'приложение';
+  return [os, br].filter(Boolean).join(' · ');
+}
+function ideaMsg(e){
+  var m = (e && e.message) || '';
+  if(/idea_limit/.test(m)) return 'Можно отправить не больше 3 сообщений в сутки. Попробуйте завтра.';
+  if(/idea_short/.test(m)) return 'Напишите чуть подробнее';
+  if(/registration_required/.test(m)) return 'Нужен вход по номеру телефона.';
+  return errText(e);
+}
+function ideaScreen(){
+  if(!isRegistered()) return needRegistration('Предложения принимаем от тех, кто вошёл по номеру, — так мы сможем ответить вам в приложении.', ideaScreen);
+  var cur = '';
+  function list(){ return IDEA_KINDS.map(function(x){ return '<button type="button" class="radio" role="radio" aria-checked="'+(x[0]===cur)+'" data-k="'+x[0]+'"><span class="r"></span>'+x[1]+'</button>'; }).join(''); }
+  openScreen(scrTop('<button type="button" class="back" data-close>Отмена</button>', 'Предложение', '')+
+    '<div class="scr-body">'+
+    '<div><h1 class="lg-h">Что улучшить?</h1><div class="muted" style="font-size:15px;margin-top:4px;line-height:1.4">Мы читаем всё и отвечаем в «Моих предложениях».</div></div>'+
+    '<div class="group" role="radiogroup" aria-label="О чём" id="ik">'+list()+'</div>'+
+    '<label class="field"><span>Сообщение</span><textarea id="it" class="inp" maxlength="1000" rows="6" placeholder="Что придумали, что неудобно или что не работает"></textarea></label>'+
+    '<div class="muted" style="font-size:13px;text-align:right;margin-top:-8px" id="ic">0 / 1000</div>'+
+    '<div class="muted" style="font-size:13px;line-height:1.45">К сообщению прикрепятся: мастер вы или заказчик, город, тип телефона и браузера ('+esc(deviceShort()||'неизвестно')+'), версия приложения. Номер телефона не прикрепляется.</div>'+
+    '<div class="muted" style="font-size:13px;line-height:1.45">Вопросы о ваших персональных данных — на <a class="lnk" href="mailto:uustarybul@mail.ru">uustarybul@mail.ru</a>.</div>'+
+    '<div class="spacer"></div>'+
+    '<button type="button" class="btn pr" id="is">Отправить</button></div>',
+  function(){
+    var ik = document.getElementById('ik'), it = document.getElementById('it');
+    ik.addEventListener('click', function(e){ var b=e.target.closest('[data-k]'); if(!b) return; cur=b.getAttribute('data-k'); ik.innerHTML=list(); });
+    it.addEventListener('input', function(){ document.getElementById('ic').textContent = it.value.length+' / 1000'; });
+    document.getElementById('is').onclick = function(){
+      if(!cur) return toast('Выберите: идея, неудобно или сломалось');
+      if(it.value.trim().length < 5) return toast('Напишите чуть подробнее');
+      var b = document.getElementById('is'); b.disabled = true;
+      sb.rpc('idea_send', {p_kind:cur, p_body:it.value, p_city:S.city||null, p_device:deviceShort(), p_version:APP_VERSION}).then(function(r){
+        if(r.error){ b.disabled=false; return toast(ideaMsg(r.error)); }
+        closeScreen(); toast('Спасибо! Ответ появится в «Моих предложениях»');
+        if(view.name==='settings') settingsView();
+      });
+    };
+  });
+}
+function myIdeasScreen(){
+  if(!isRegistered()) return needRegistration('Ваши предложения и ответы на них видны после входа по номеру.', myIdeasScreen);
+  var head = scrTop('<button type="button" class="back" data-close>Назад</button>', 'Мои предложения', '');
+  openScreen(head+'<div class="scr-body"><div class="skel" style="height:120px"></div></div>');
+  sb.rpc('idea_list_mine').then(function(r){
+    if(!screenEl) return;
+    if(r.error) return openScreen(head+'<div class="scr-body"><div class="empty">'+esc(errText(r.error))+'</div></div>');
+    var items = r.data || [];
+    var kind = {}; IDEA_KINDS.forEach(function(x){ kind[x[0]] = x[1]; });
+    openScreen(head+'<div class="scr-body">'+
+      (items.length ? items.map(function(x){
+        return '<div class="review"><div class="between" style="gap:10px"><b style="font-size:15px">'+esc(kind[x.kind]||'')+'</b>'+
+          '<span class="ist '+esc(x.status)+'">'+esc(IDEA_ST[x.status]||'')+'</span></div>'+
+          '<div class="muted" style="font-size:13px;margin-top:2px">'+esc(shortDate(x.created_at))+'</div>'+
+          '<div style="margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45">'+esc(x.body)+'</div>'+
+          (x.reply ? '<div class="reply"><div class="muted" style="font-size:13px">Ответ Уустары бул'+(x.replied_at?' · '+esc(shortDate(x.replied_at)):'')+'</div><div style="margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45">'+esc(x.reply)+'</div></div>' : '')+
+        '</div>'; }).join('')
+       : '<div class="empty">Вы пока ничего не предлагали.</div>')+
+      '<div class="spacer"></div><button type="button" class="btn pr" id="inew">Предложить идею</button></div>',
+    function(){ document.getElementById('inew').onclick = ideaScreen; });
   });
 }
 
