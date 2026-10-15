@@ -1,0 +1,10 @@
+# Уустары бул — чистка файлов хранилища без ссылок (server/ub-cleanup). Ставит deploy.sh.
+[Unit]
+Description=Uustary bul: storage cleanup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ub-cleanup
+Nice=10

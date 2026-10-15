@@ -1,0 +1,38 @@
+#!/bin/bash
+# Уустары бул — чистка файлов хранилища (план, шаг 7). Ставит deploy.sh в /usr/local/sbin, таймер ub-cleanup.timer — 04:10 Якутск.
+# Удаляет файлы фото, на которые ничего не ссылается (старые аватары, фото удалённых направлений и аккаунтов),
+# через Storage API с ключом сервиса — так удаляются и запись, и сам файл. Список — public.ops_orphan_photos().
+#   ub-cleanup         — удалить (до 2000 файлов за раз)
+#   ub-cleanup --dry   — только посчитать
+# Итог — в ops.log (вид cleanup); в вывод — только числа.
+set -uo pipefail
+DRY=0; [ "${1:-}" = "--dry" ] && DRY=1
+if [ -n "${UB_CLEANUP_LOCAL:-}" ]; then   # проверка в среде Claude (server/test): база и шлюз локальные
+  q() { /usr/lib/postgresql/16/bin/psql -X -q -At -v ON_ERROR_STOP=1 -h /tmp -p "${UB_PGPORT:-5544}" -U postgres -d postgres -c "$1"; }
+  URL=http://127.0.0.1:8000; SRV=$(python3 "$(dirname "$0")/test/gateway.py" keys | sed -n 's/^service=//p'); RES=()
+else
+  cd /opt/supabase || exit 1
+  q() { docker exec -i supabase-db psql -X -q -At -v ON_ERROR_STOP=1 -U postgres -d postgres -c "$1"; }
+  URL=$(grep '^SUPABASE_PUBLIC_URL=' .env | cut -d= -f2-); SRV=$(grep '^SERVICE_ROLE_KEY=' .env | cut -d= -f2-)
+  RES=(--resolve "${URL#https://}:443:127.0.0.1")
+fi
+
+total=0; failed=0
+for round in 1 2 3 4; do
+  mapfile -t names < <(q "select public.ops_orphan_photos(500)" 2>/dev/null)
+  [ ${#names[@]} = 0 ] && break
+  if [ $DRY = 1 ]; then total=${#names[@]}; break; fi
+  for ((i = 0; i < ${#names[@]}; i += 100)); do
+    body=$(printf '%s\n' "${names[@]:i:100}" | jq -R . | jq -cs '{prefixes: .}')
+    out=$(curl -s -m 60 "${RES[@]}" -X DELETE -H "apikey: $SRV" -H "Authorization: Bearer $SRV" -H 'Content-Type: application/json' \
+            -d "$body" "$URL/storage/v1/object/photos")
+    n=$(printf '%s' "$out" | jq 'if type == "array" then length else 0 end' 2>/dev/null || echo 0)
+    total=$((total + n)); [ "$n" -lt "$(printf '%s\n' "${names[@]:i:100}" | wc -l)" ] && failed=1
+  done
+  [ $failed = 1 ] && break
+done
+
+if [ $DRY = 1 ]; then echo "файлов без ссылок (старше суток): $total"; exit 0; fi
+q "insert into ops.log (kind, ok, detail) values ('cleanup', $([ $failed = 0 ] && echo true || echo false), '{\"files\": $total}')" >/dev/null 2>&1 || true
+echo "чистка хранилища: удалено файлов $total$([ $failed = 1 ] && echo ' — часть не удалилась')"
+[ $failed = 0 ]

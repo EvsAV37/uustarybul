@@ -41,7 +41,7 @@ done < <(docker compose ps -a --format '{{.Service}} {{.State}} {{.Health}}' 2>/
 docker compose ps --format '{{.Service}}' 2>/dev/null | grep -qx db || add "container:db" "база не запущена"
 
 systemctl is-active -q fail2ban || add fail2ban "fail2ban не работает"
-for t in ub-backup.timer ub-free-pro-sync.timer; do systemctl is-active -q "$t" || add "timer:$t" "не работает таймер $t"; done
+for t in ub-backup.timer ub-free-pro-sync.timer ub-cleanup.timer; do systemctl is-active -q "$t" || add "timer:$t" "не работает таймер $t"; done
 
 json=$(printf '%s\n' "${F[@]}" | jq -cs '.')
 out=$(docker exec -i supabase-db psql -X -q -At -v ON_ERROR_STOP=1 -U postgres -d postgres \

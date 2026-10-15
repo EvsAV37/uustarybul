@@ -108,9 +108,11 @@ def main():
     check('публичная ссылка', st == 200)
     st, r = call('POST', f'/storage/v1/object/photos/{fn}', token=ut, raw=jpg, ctype='image/jpeg')
     check('повтор того же имени — 409', st == 409, r)
-    # Как в Supabase: удаление требует политик DELETE и SELECT; у photos SELECT нет — удаляется 0 файлов.
+    # Как в Supabase: удаление требует политик DELETE и SELECT (SELECT на свои файлы — миграция 025)
     st, r = call('DELETE', '/storage/v1/object/photos', {'prefixes': [fn]}, ut)
-    check('удаление владельцем: 0 (нет политики SELECT)', st == 200 and r == [], r)
+    check('удаление владельцем', st == 200 and len(r) == 1, r)
+    st, r = call('DELETE', '/storage/v1/object/photos', {'prefixes': [f'{pid}/x.jpg']}, ut)
+    check('чужой файл не удаляется', st == 200 and r == [], r)
 
     print('Управление')
     st, a = call('POST', '/__test/session', {'phone': '70000000003', 'admin': True})

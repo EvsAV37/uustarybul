@@ -1,0 +1,11 @@
+# Уустары бул — чистка хранилища каждую ночь в 04:10 по Якутску.
+[Unit]
+Description=Uustary bul: nightly storage cleanup
+
+[Timer]
+OnCalendar=*-*-* 04:10:00 Asia/Yakutsk
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
