@@ -1,26 +1,31 @@
--- Проверка рассылки (021) на сервере — всё внутри транзакции с откатом, в журнал только сводка
+-- Проверка «Настроек» управления (024) и обслуживания (022–023) на сервере — с откатом, в журнал только сводка
 begin;
--- временный владелец — демо-мастер (откатится)
-insert into public.admins (user_id, role, pw_hash) select id, 'owner', 'x' from public.profiles where is_demo order by created_at limit 1;
+-- временный владелец — тестовый аккаунт +7 000 000-00-01 (его заводит проверка входа при выкладке; откатится)
+insert into public.admins (user_id, role, pw_hash) select id, 'owner', 'x' from auth.users where phone = '70000000001';
 insert into public.admin_sessions (session_id, user_id, expires_at)
-  select '00000000-0000-4000-8000-000000000021', id, now() + interval '10 minutes' from public.profiles where is_demo order by created_at limit 1;
--- один демо-мастер на время проверки — «настоящий» с включённым телефоном (откатится)
-update public.profiles set is_demo = false where id = (select id from public.profiles where is_demo order by created_at offset 1 limit 1);
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
-  select id, 'https://push.invalid/ub-check-021', repeat('a', 60), repeat('b', 20) from public.profiles
-   where not is_demo and deleted_at is null order by created_at limit 1;
-select set_config('request.jwt.claims', json_build_object('sub', (select id from public.profiles where is_demo order by created_at limit 1),
-  'session_id', '00000000-0000-4000-8000-000000000021', 'is_anonymous', false, 'role', 'authenticated')::text, true);
+  select '00000000-0000-4000-8000-000000000024', id, now() + interval '10 minutes' from auth.users where phone = '70000000001';
+select set_config('request.jwt.claims', json_build_object('sub', (select id from auth.users where phone = '70000000001'),
+  'session_id', '00000000-0000-4000-8000-000000000024', 'is_anonymous', false, 'role', 'authenticated')::text, true);
 set local role authenticated;
-select 'preview' k, public.admin_broadcast_preview('{"topic":"service"}') - 'owner' p;
-select 'send' k, public.admin_broadcast_send('{"topic":"docs","title":"Проверка рассылки","body":"Проверка на сервере, откатится.","go":"doc:terms","no_ads":true}') - 'quota' r;
-select 'list' k, jsonb_array_length(l -> 'items') items, (l -> 'items' -> 0) ->> 'waiting' waiting from (select public.admin_broadcast_list(5) l) x;
+select 'settings' k, s -> 'demo' demo, s -> 'test_accounts' test_accounts, jsonb_array_length(s -> 'admins') admins,
+       jsonb_array_length(s -> 'consents') consent_rows, (s -> 'ops' -> 'backup' ->> 'ok_at') is not null backup_seen,
+       (s -> 'ops' -> 'watch' ->> 'checked_at') is not null watch_seen
+  from (select public.admin_settings() s) x;
+select 'overview_system' k, (o -> 'system' ? 'backup') backup, (o -> 'system' ? 'watch') watch, (o -> 'system' ? 'push_queue') core
+  from (select public.admin_overview(null, 7) o) x;
+select 'demo_purge' k, public.admin_demo_purge('УДАЛИТЬ') r;
+-- тестовый номер — администратор: выключить тестовые номера должно быть нельзя
+do $$ begin perform public.admin_test_logins_off(); raise notice 'tests_off: ПРОШЛО — ошибка';
+exception when others then raise notice 'tests_off: отказ, как и нужно (%)', sqlerrm; end $$;
+do $$ begin perform public.admin_demo_purge('удалить'); raise notice 'demo word: ПРОШЛО — ошибка';
+exception when others then raise notice 'demo word: отказ, как и нужно'; end $$;
 reset role;
-select 'queue' k, count(*) from public.notifications where kind = 'broadcast';
-select 'log' k, count(*) from public.admin_log where action = 'broadcast_send';
-select 'rights' k, has_function_privilege('anon', 'public.admin_broadcast_send(jsonb)', 'execute') anon_send,
-       has_function_privilege('authenticated', 'public.broadcast_targets(int,int)', 'execute') targets,
-       has_table_privilege('authenticated', 'public.broadcasts', 'select') tbl;
--- коды входа: сколько ещё открытых (после выкладки новые пишутся только хешем)
-select 'codes' k, count(*) filter (where pincode like 'h1:%') hashed, count(*) filter (where pincode not like 'h1:%') plain from public.phone_verify_codes;
+select 'after' k, (select count(*) from public.profiles where is_demo) demo_left,
+       (select test_logins_off is not null from public.app_settings limit 1) flag,
+       (select count(*) from public.admin_log where action in ('test_logins_off', 'demo_purge')) logged;
+select 'rights' k, has_function_privilege('anon', 'public.admin_demo_purge(text)', 'execute') anon_purge,
+       has_function_privilege('authenticated', 'public.ops_watch_report(jsonb)', 'execute') watch_report,
+       has_function_privilege('authenticated', 'public.admin_overview_core(int,int)', 'execute') core,
+       has_schema_privilege('authenticated', 'ops', 'usage') ops_schema;
+select 'watch_state' k, checked_at is not null checked, jsonb_array_length(fails) fails from ops.watch_state;
 rollback;
