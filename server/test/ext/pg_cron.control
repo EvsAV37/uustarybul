@@ -1,0 +1,5 @@
+# Поддельный pg_cron для локальной проверки: задания только записываются в cron.job, не выполняются.
+comment = 'stub pg_cron (local tests)'
+default_version = '1.0'
+relocatable = false
+superuser = true

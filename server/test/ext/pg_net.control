@@ -1,0 +1,5 @@
+# Поддельный pg_net для локальной проверки: запросы не отправляются, а пишутся в net.requests.
+comment = 'stub pg_net (local tests)'
+default_version = '1.0'
+relocatable = false
+superuser = true

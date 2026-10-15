@@ -5,3 +5,6 @@ vendor/
 
 # управление собирается только на сервере (build.py с UB_SB_KEY)
 /admin/
+
+# локальная проверка (server/test/local.sh): база, бинарники, собранный сайт
+server/test/.run/
