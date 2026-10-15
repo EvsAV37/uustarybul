@@ -219,10 +219,14 @@ Deno.serve(async (req) => {
       const g = await botGuard('call');
       if (g) { await note('call', refusalCode(g), logExtra(method)); return fail(g, g === 'pow_failed' || g === 'pow_replay' ? 400 : 429); }
       if (await adminDenied(method)) return notAdmin();
-      const { data, error } = await admin.rpc('phone_call_allowed', { p_session: sessionKey, p_phone: phone });
-      if (error) throw new Error('limit check failed: ' + error.message);
-      if (data) { await note('call', refusalCode(data as string), logExtra(method)); return fail(data as string, 429); }
-      await admin.from('phone_verify_log').insert({ session_key: sessionKey, phone, kind: method });
+      // Лимиты на устройство, номер и сервис берегут баланс Zvonok; тестовым номерам звонков нет — им не нужны
+      // (так и проверка выкладки может входить сколько угодно раз). Задачка и лимит по IP — для всех.
+      if (!isTest) {
+        const { data, error } = await admin.rpc('phone_call_allowed', { p_session: sessionKey, p_phone: phone });
+        if (error) throw new Error('limit check failed: ' + error.message);
+        if (data) { await note('call', refusalCode(data as string), logExtra(method)); return fail(data as string, 429); }
+        await admin.from('phone_verify_log').insert({ session_key: sessionKey, phone, kind: method });
+      }
       await note('call', 'sent', logExtra(method));
       return null;
     }

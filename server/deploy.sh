@@ -152,6 +152,33 @@ if [ $FAIL = 1 ]; then
   docker compose logs caddy --since 30m --no-log-prefix 2>&1 | grep -iE 'certificate|obtain|acme|error|tls' | tail -8 | cut -c1-400
   echo "-- снаружи: $(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL/" 2>&1)"
 fi
+# Вход целиком (план, шаг 5): задачка → тестовый номер → код (сверка хеша) → сессия → выход. Звонка нет.
+# Если тестовые номера выключены — только задачка: гость проходит проверку, потом удаляется.
+SRV=$(grep '^SERVICE_ROLE_KEY=' .env | cut -d= -f2-)
+vp() { curl -s -m 20 --resolve "$HOSTN:443:127.0.0.1" -X POST -H 'Content-Type: application/json' -H "apikey: $ANON" ${2:+-H "Authorization: Bearer $2"} -d "$1" "$URL/functions/v1/verify-phone"; }
+pow() { vp '{"action":"challenge"}' "${1:-}" | python3 -c '
+import sys, json, hashlib
+c = json.load(sys.stdin)
+for n in range(c["maxnumber"] + 1):
+    if hashlib.sha256((c["salt"] + str(n)).encode()).hexdigest() == c["challenge"]:
+        print(json.dumps({k: c[k] for k in ("algorithm", "challenge", "salt", "signature")} | {"number": n})); break'; }
+auth() { curl -s -m 20 --resolve "$HOSTN:443:127.0.0.1" -X POST -H 'Content-Type: application/json' -H "apikey: $ANON" ${3:+-H "Authorization: Bearer $3"} -d "$2" "$URL/auth/v1/$1"; }
+if ! grep -q '^DISABLE_TEST_LOGINS=1' functions.env 2>/dev/null; then
+  p=$(pow); r1=$(vp "$(jq -cn --argjson p "${p:-null}" '{action:"start",phone:"+7 000 000-00-01",pow:$p}')")
+  r2=$(vp '{"action":"confirm","phone":"+7 000 000-00-01","code":"1234"}')
+  th=$(printf '%s' "$r2" | jq -r '.token_hash // empty' 2>/dev/null)
+  s=$( [ -n "$th" ] && auth verify "$(jq -cn --arg t "$th" '{type:"magiclink",token_hash:$t}')" )
+  at=$(printf '%s' "$s" | jq -r '.access_token // empty' 2>/dev/null); ph=$(printf '%s' "$s" | jq -r '.user.phone // empty' 2>/dev/null)
+  if [ -n "$at" ] && [ "$ph" = 70000000001 ]; then
+    auth logout '{}' "$at" >/dev/null; echo "вход тестовым номером: ок (задачка, код по хешу, сессия, выход)"
+  else bad "вход тестовым номером не прошёл: $(printf '%s | %s' "$r1" "$r2" | tr -d '\n' | cut -c1-200)"; fi
+else
+  g=$(auth signup '{"data":{}}'); gt=$(printf '%s' "$g" | jq -r '.access_token // empty' 2>/dev/null); gid=$(printf '%s' "$g" | jq -r '.user.id // empty' 2>/dev/null)
+  p=$(pow "$gt"); r=$(vp "$(jq -cn --argjson p "${p:-null}" '{action:"guest",pow:$p}')" "$gt")
+  [ -n "$gid" ] && curl -s -m 20 --resolve "$HOSTN:443:127.0.0.1" -X DELETE -H "apikey: $SRV" -H "Authorization: Bearer $SRV" "$URL/auth/v1/admin/users/$gid" >/dev/null
+  [ "$(printf '%s' "$r" | jq -r '.ok' 2>/dev/null)" = true ] && echo "задачка для телефона: ок (тестовые номера выключены — вход не проверяется)" \
+    || bad "задачка для телефона не прошла: $(printf '%s' "$r" | cut -c1-200)"
+fi
 systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
 last=$(ls -1t /opt/ub/backups/db-*.dump 2>/dev/null | head -1)
 if [ -n "$last" ]; then
