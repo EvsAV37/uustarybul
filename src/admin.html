@@ -304,6 +304,20 @@ function ava(m, size, radius){
 var MG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 var MS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','нояб','дек'];
 function dm(iso){ var d=new Date(iso); return d.getDate()+' '+MS[d.getMonth()]; }
+// Баланс Zvonok (ub-zvonok-balance раз в час, ops.zvonok_balance): ниже порога или не узнать 3 часа — красным
+function rub(n){ return Number(n).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽'; }
+function whenDay(iso){ var d=new Date(iso), t=new Date(), hm=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  if(d.toDateString()===t.toDateString()) return 'сегодня '+hm;
+  t.setDate(t.getDate()-1); if(d.toDateString()===t.toDateString()) return 'вчера '+hm;
+  return dm(iso); }
+function zvChip(z){
+  z = z||{}; var when = whenDay;
+  var old = !z.ok_at || Date.now()-new Date(z.ok_at) > 3*3600e3;
+  if(!z.checked_at) return '<span class="chip gry">ещё не проверял</span>';
+  if(z.error && old) return '<span class="chip red" title="'+esc(z.error)+'">не узнать'+(z.ok_at ? ' · было '+rub(z.balance) : '')+'</span>';
+  if(z.balance!=null && Number(z.balance) < Number(z.min||100)) return '<span class="chip red">'+rub(z.balance)+' — пополните</span>';
+  return '<span class="chip grn">'+rub(z.balance)+' · '+when(z.ok_at)+'</span>';
+}
 // «Система»: копии базы и проверка восстановления (ub-backup на сервере, журнал ops.log)
 function opsRows(s){
   var b = s.backup||{}, r = s.restore||{}, now = Date.now(), H = 3600e3;
@@ -324,7 +338,8 @@ function opsRows(s){
   else if(now-new Date(w.checked_at) > 15*60e3) wc = '<span class="chip red">молчит с '+when(w.checked_at)+'</span>';
   else if(wf.length) wc = '<span class="chip red">'+wf.length+' '+plural(wf.length,'сбой','сбоя','сбоев')+(w.since?' с '+when(w.since):'')+'</span>';
   else wc = '<span class="chip grn">всё в порядке</span>';
-  return '<div class="row"><span style="flex:1">Копия базы</span>'+bc+'</div>'+
+  return '<div class="row"><span style="flex:1">Баланс Zvonok</span>'+zvChip(s.zvonok)+'</div>'+
+         '<div class="row"><span style="flex:1">Копия базы</span>'+bc+'</div>'+
          '<div class="row"><span style="flex:1">Проверка копии</span>'+rc+'</div>'+
          '<div class="row" style="flex-wrap:wrap"><span style="flex:1">Сторож</span>'+wc+
            (wf.length ? '<div class="d" style="flex-basis:100%;color:var(--dgt)">'+wf.map(function(f){ return esc(f.text); }).join('<br>')+'</div>' : '')+'</div>';
@@ -1382,9 +1397,9 @@ function pageSecurity(){
              '<div class="row"><span style="flex:1">«Позвоните нам»</span>'+on(cfg.callback,'есть','нет')+'</div>'+
              '<div class="row"><span style="flex:1">Тестовые номера</span>'+(cfg.test_logins?'<span class="chip yel">включены</span>':'<span class="chip grn">выключены</span>')+'</div>' : '')+
       '<div class="row"><span style="flex:1">Входят после звонка · 7 дней</span>'+(dl.sent ? '<b'+(dl.sent>=5 && dRate<50?' class="warn"':'')+'>'+num(dl.ok)+' из '+num(dl.sent)+'</b>' : '<span class="d">звонков не было</span>')+'</div>'+
-      '<div class="row"><span style="flex:1">Баланс</span><a href="https://zvonok.com/manager/" target="_blank" rel="noopener noreferrer" style="font-weight:600">в кабинете Zvonok ›</a></div></div>'+
+      '<div class="row"><span style="flex:1">Баланс</span>'+zvChip(o.zvonok)+'</div></div>'+
       '<span class="d">'+(cfg && !cfg.flash ? 'Пока ключей нет, входят только тестовые номера. ' : '')+(cfg && cfg.test_logins ? 'Тестовые номера выключить перед запуском. ' : '')+
-        (dl.sent>=5 && dRate<50 ? 'Меньше половины звонков заканчиваются входом — возможно, оператор режет звонок-сброс. ' : '')+'Ключи вводятся на сервере командой ub-secret, не здесь.</span></section>';
+        (dl.sent>=5 && dRate<50 ? 'Меньше половины звонков заканчиваются входом — возможно, оператор режет звонок-сброс. ' : '')+'Баланс сторож проверяет раз в час и пришлёт push, если меньше '+rub((o.zvonok||{}).min||100)+'; пополнить — в <a href="https://zvonok.com/manager/" target="_blank" rel="noopener noreferrer" style="font-weight:600">кабинете Zvonok ›</a>. Ключи вводятся на сервере командой ub-secret, не здесь.</span></section>';
     // ПДн
     var pdc = '<section class="card" aria-label="Запросы по персональным данным"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Запросы по персональным данным</h2>'+(pd.length?'<span class="chip '+(pd.some(function(x){return x.days_left<=2;})?'red':'yel')+'">'+pd.length+'</span>':'')+'</div><div class="rows">'+
       pd.slice(0,4).map(function(x){ return '<a class="row" href="#security/pd/'+x.id+'"><div style="flex:1;min-width:0"><div class="pdk">'+esc(PDK[x.kind])+'</div><div class="d">'+esc(pdWho(x))+' · получено '+dmd(x.received_on)+'</div></div>'+dueChip(x)+'</a>'; }).join('')+

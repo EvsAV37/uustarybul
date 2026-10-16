@@ -1,7 +1,8 @@
 #!/bin/bash
 # Уустары бул — сторож (план, шаг 4). Ставит deploy.sh в /usr/local/sbin, запускает таймер ub-watch.timer раз в 5 минут.
 # Проверяет то, что видно только с сервера (сайт, API, вход, функции, диск, память, контейнеры, fail2ban, таймеры),
-# и передаёт сбои в базу — public.ops_watch_report() добавит проверки по базе (копии, cron, очередь push, Zvonok),
+# раз в час обновляет баланс Zvonok (ub-zvonok-balance),
+# и передаёт сбои в базу — public.ops_watch_report() добавит проверки по базе (копии, cron, очередь push, Zvonok и его баланс),
 # решит, кого и когда уведомить (push администраторам), и запишет итог для «Системы» в управлении.
 #   ub-watch          — одна проверка (тихо; печатает только сбои)
 #   ub-watch -v       — с подробностями
@@ -42,6 +43,9 @@ docker compose ps --format '{{.Service}}' 2>/dev/null | grep -qx db || add "cont
 
 systemctl is-active -q fail2ban || add fail2ban "fail2ban не работает"
 for t in ub-backup.timer ub-free-pro-sync.timer ub-cleanup.timer; do systemctl is-active -q "$t" || add "timer:$t" "не работает таймер $t"; done
+
+# баланс Zvonok — раз в час (сам решает, пора ли); итог в базе, порог и сбой — в ops_watch_db
+/usr/local/sbin/ub-zvonok-balance >/dev/null 2>&1 || true
 
 json=$(printf '%s\n' "${F[@]}" | jq -cs '.')
 out=$(docker exec -i supabase-db psql -X -q -At -v ON_ERROR_STOP=1 -U postgres -d postgres \

@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+# Уустары бул — баланс Zvonok (16.10.2026). Ставит deploy.sh в /usr/local/sbin; зовёт сторож (ub-watch) каждые 5 минут.
+# Раз в час спрашивает баланс у Zvonok (users/balance, ключ ZVONOK_PUBLIC_KEY из /opt/supabase/functions.env)
+# и пишет итог в базу (public.ops_zvonok_balance_set). Порог и push — в базе (ops_watch_db, миграция 028).
+#   ub-zvonok-balance           — если с прошлой проверки прошло меньше 55 минут, ничего не делает
+#   ub-zvonok-balance --now     — проверить сейчас и напечатать итог (без суммы: вывод выкладки виден в GitHub)
+#   ub-zvonok-balance --shape   — вместе с --now: устройство ответа Zvonok (имена полей и типы, без значений)
+# Ключ не попадает ни в командную строку, ни в вывод, ни в базу.
+import json, subprocess, sys, urllib.error, urllib.parse, urllib.request
+
+FUNC_ENV = '/opt/supabase/functions.env'
+URL = 'https://zvonok.com/manager/cabapi_external/api/v1/users/balance/'
+NOW = '--now' in sys.argv
+SHAPE = '--shape' in sys.argv
+
+
+def psql(sql, **vars):
+    args = ['docker', 'exec', '-i', 'supabase-db', 'psql', '-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres']
+    for k, v in vars.items():
+        args += ['-v', f'{k}={v}']
+    r = subprocess.run(args, input=sql, capture_output=True, text=True, timeout=30)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or r.stdout).strip().splitlines()[-1][:200] if (r.stderr or r.stdout).strip() else 'psql')
+    return r.stdout.strip()
+
+
+def read_key():
+    try:
+        with open(FUNC_ENV) as f:
+            for line in f:
+                if line.startswith('ZVONOK_PUBLIC_KEY='):
+                    return line.split('=', 1)[1].strip()
+    except OSError:
+        pass
+    return ''
+
+
+def to_num(v):
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = v.strip().replace(' ', '').replace(' ', '').replace(',', '.')
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    return None
+
+
+WRAP = ('data', 'result', 'response', 'user', 'amount', 'value', 'sum')
+
+
+def find_balance(o, depth=0):
+    """Число баланса из ответа: само число, строка с числом или поле со словом balance (на любой глубине)."""
+    if depth > 4:
+        return None
+    n = to_num(o)
+    if n is not None:
+        return n
+    if isinstance(o, dict):
+        keys = sorted(o, key=lambda k: (0 if 'balance' in k.lower() else 1 if k.lower() in WRAP else 2))
+        for k in keys:
+            if 'balance' in k.lower() or k.lower() in WRAP:
+                n = find_balance(o[k], depth + 1)
+                if n is not None:
+                    return n
+    if isinstance(o, list) and len(o) == 1:
+        return find_balance(o[0], depth + 1)
+    return None
+
+
+def shape(o, path=''):
+    """Устройство ответа без значений: имя поля → тип."""
+    t = {dict: 'объект', list: 'список', str: 'строка', bool: 'да/нет', type(None): 'null'}.get(type(o), 'число')
+    if isinstance(o, dict):
+        return [x for k, v in o.items() for x in shape(v, f'{path}.{k}' if path else k)] or [f'{path or "ответ"}: пустой объект']
+    if isinstance(o, list):
+        return [f'{path or "ответ"}: список из {len(o)}'] + (shape(o[0], (path or 'ответ') + '[0]') if o else [])
+    return [f'{path or "ответ"}: {t}']
+
+
+def main():
+    key = read_key()
+    if not key:
+        if NOW:
+            print('баланс Zvonok: ключа нет — не проверяется')
+        return 0
+    if not NOW:
+        age = psql("select coalesce(extract(epoch from now() - checked_at)::int, 999999) from ops.zvonok_balance where id = 1")
+        if age and int(age) < 3300:
+            return 0
+
+    balance, error, body = None, None, None
+    try:
+        req = urllib.request.Request(URL + '?' + urllib.parse.urlencode({'public_key': key}),
+                                     headers={'User-Agent': 'uustarybul-watch'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            raw = r.read(65536).decode('utf-8', 'replace')
+        try:
+            body = json.loads(raw)
+        except ValueError:
+            body = raw.strip()
+        balance = find_balance(body)
+        if balance is None:
+            msg = ''
+            if isinstance(body, dict):
+                for k in ('error', 'message', 'detail', 'status'):
+                    if isinstance(body.get(k), str):
+                        msg = body[k]
+                        break
+            error = ('Zvonok: ' + msg if msg else 'в ответе Zvonok нет баланса')
+    except urllib.error.HTTPError as e:
+        error = f'Zvonok ответил {e.code}'
+    except Exception as e:
+        error = 'Zvonok не отвечает (' + type(e).__name__ + ')'
+    if error:
+        error = error.replace(key, '***')[:200]
+
+    psql("select public.ops_zvonok_balance_set(nullif(:'b', '')::numeric, nullif(:'e', ''))",
+         b='' if balance is None else f'{balance:.2f}', e=error or '')
+
+    if NOW:
+        print('баланс Zvonok: ' + ('получен' if error is None else 'НЕ получен — ' + error))
+        if SHAPE and body is not None:
+            print('  ответ Zvonok: ' + ('; '.join(shape(body)) if not isinstance(body, str) else 'текст, не JSON'))
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print('баланс Zvonok: ошибка проверки — ' + str(e)[:200])
+        sys.exit(0 if not NOW else 1)

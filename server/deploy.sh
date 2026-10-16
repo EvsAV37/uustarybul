@@ -5,7 +5,7 @@
 #   3. миграции базы: server/db/*.sql, затем supabase/migrations/*.sql — каждая один раз (ops.migrations)
 #   4. server/run.sql — разовые запросы/загрузки: выполняется, если файл изменился
 #   5. сайт: сборка build.py под свой сервер и выкладка в /opt/ub/site
-#   6. проверка: контейнеры и ответы сайта, API, входа, функций
+#   6. проверка: контейнеры и ответы сайта, API, входа, функций, баланс Zvonok (без суммы)
 # Всё, что печатается, видно в GitHub (ветка server-log) — никаких персональных данных в выводе.
 set -uo pipefail
 REL=$(cd "$(dirname "$0")/.." && pwd)
@@ -26,7 +26,7 @@ step "1. Настройки сервера"
 recreate=0; caddy=0
 if ! cmp -s "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; then cp "$REL/server/docker-compose.ub.yml" docker-compose.ub.yml; recreate=1; echo "обновлён docker-compose.ub.yml"; fi
 if ! cmp -s "$REL/server/Caddyfile" ub/Caddyfile; then cp "$REL/server/Caddyfile" ub/Caddyfile; caddy=1; echo "обновлён Caddyfile"; fi
-for t in ub-run ub-secret ub-free-pro-sync ub-backup ub-watch ub-cleanup; do
+for t in ub-run ub-secret ub-free-pro-sync ub-backup ub-watch ub-cleanup ub-zvonok-balance; do
   cmp -s "$REL/server/$t" "/usr/local/sbin/$t" || { install -m 755 "$REL/server/$t" "/usr/local/sbin/$t"; echo "обновлён $t"; }
 done
 # таймер: дата бесплатного Про в сайте = дата в базе (раз в 5 минут)
@@ -218,6 +218,9 @@ else bad "копий базы нет"; fi
 w=$(psql_db -At -F'|' -c "select coalesce(to_char(checked_at at time zone 'Asia/Yakutsk','DD.MM HH24:MI'),'ещё не было'), jsonb_array_length(fails) from ops.watch_state" 2>/dev/null)
 echo "сторож: таймер $(systemctl is-active ub-watch.timer), последняя проверка ${w%%|*}, сбоев ${w##*|}"
 systemctl is-active -q ub-watch.timer || bad "сторож не работает"
+# баланс Zvonok: запрос сейчас; сумму не печатаем (журнал виден в GitHub), только итог и устройство ответа.
+# Сбой Zvonok выкладку не валит — о нём напомнит сторож.
+/usr/local/sbin/ub-zvonok-balance --now --shape 2>&1 | head -5
 echo "хранилище: $(/usr/local/sbin/ub-cleanup --dry 2>/dev/null || echo 'не посчитать'); чистка — таймер $(systemctl is-active ub-cleanup.timer)"
 f2b_n() { fail2ban-client status "$1" 2>/dev/null | sed -n 's/.*Currently banned:[[:space:]]*//p'; }
 if systemctl is-active -q fail2ban && [ -n "$(f2b_n sshd)" ] && [ -n "$(f2b_n ub-studio)" ]; then
