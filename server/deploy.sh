@@ -207,6 +207,8 @@ if [ -n "$pid" ]; then
   [ "$og" = 1 ] && [ "$hm" = 1 ] && echo "превью ссылки на мастера: ок" || bad "превью ссылки на мастера не работает (бот: $og, человек: $hm)"
 fi
 systemctl is-active -q ub-free-pro-sync.timer && echo "таймер даты Про: работает" || bad "таймер даты Про не работает"
+c=$(code "$URL/docs/offer.html"); [ "$c" = 404 ] && echo "оферта скрыта: 404" || bad "оферта видна на сайте ($c)"
+grep -q '<span data-free-pro>[0-9]' "$UB/site/docs/terms.html" && echo "дата Про в Соглашении: есть" || bad "в Соглашении нет даты бесплатного Про"
 last=$(ls -1t /opt/ub/backups/db-*.dump 2>/dev/null | head -1)
 if [ -n "$last" ]; then
   echo "копии базы: $(ls -1 /opt/ub/backups/db-*.dump | wc -l), последняя $(basename "$last") ($(du -h "$last" | cut -f1)); таймер: $(systemctl is-active ub-backup.timer)"

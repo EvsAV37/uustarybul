@@ -808,7 +808,7 @@ function installApp(){
 }
 
 /* ---------- документы: открываются поверх всего, в том числе поверх входа ---------- */
-var DOCS = [['terms','Пользовательское соглашение'],['privacy','Политика обработки персональных данных'],['consents','Согласия на обработку и распространение'],['offer','Оферта на Про-аккаунт']];
+var DOCS = [['terms','Пользовательское соглашение'],['privacy','Политика обработки персональных данных'],['consents','Согласия на обработку и распространение']];
 function openDoc(ref){
   var parts = String(ref).split('#'), key = parts[0], anchor = parts[1];
   var el = document.createElement('div'); el.className = 'screen docv'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
@@ -920,7 +920,7 @@ setTimeout(hideSplash, 3500);
   var m = /[?&]go=cab\b/.test(location.search);
   if(/[?&]go=ideas\b/.test(location.search)){ view = {name:'cab'}; pendingIdeas = true; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
   var mm = /[?&]m=([0-9a-f-]{36})\b/i.exec(location.search);
-  var dd = /[?&]doc=(terms|privacy|consents|offer)\b/.exec(location.search);
+  var dd = /[?&]doc=(terms|privacy|consents)\b/.exec(location.search);
   if(dd){ try{ history.replaceState(null, '', location.pathname); }catch(e){} setTimeout(function(){ openDoc(dd[1]); }, 0); }
   else if(m){ view = {name:'cab'}; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
   else if(mm){ view = {name:'profile', id:mm[1].toLowerCase(), from:'Главная'}; S.stack = [{name:'home'}]; try{ history.replaceState(null, '', location.pathname); }catch(e){} }
@@ -930,7 +930,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('messa
   if(e.data.go==='cab'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); }
   else if(e.data.go==='home'){ closeSheet(); S.stack=[]; go({name:'home'}, false); }
   else if(e.data.go==='ideas'){ closeSheet(); S.stack=[]; go({name:'cab'}, false); myIdeasScreen(); }
-  else if(/^(terms|privacy|consents|offer)$/.test(e.data.doc||'')) openDoc(e.data.doc);
+  else if(/^(terms|privacy|consents)$/.test(e.data.doc||'')) openDoc(e.data.doc);
 });
 render();
 loadBase().then(render).then(function(){

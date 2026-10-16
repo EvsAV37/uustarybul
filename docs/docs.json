@@ -1,6 +1,9 @@
 {
  "version": "2026-10-16",
  "draft": false,
+ "hidden": [
+  "offer"
+ ],
  "docs": [
   {
    "key": "consents",
@@ -8,13 +11,6 @@
    "edition": "16 октября 2026",
    "gaps": 0,
    "draft": false
-  },
-  {
-   "key": "offer",
-   "title": "Публичная оферта на предоставление Про-аккаунта в сервисе «Уустары бул»",
-   "edition": "[дата]",
-   "gaps": 8,
-   "draft": true
   },
   {
    "key": "privacy",

@@ -2,7 +2,7 @@
 # Уустары бул — дата бесплатного Про в готовом сайте совпадает с базой.
 # Запускается таймером ub-free-pro-sync.timer раз в 5 минут (ставит deploy.sh).
 # Если в управлении продлили бесплатный Про, меняет в /opt/ub/site одну строку в index.html
-# (var FREE_PRO_BUILT) и дату в оферте (docs/offer.html, <span data-free-pro>). Больше ничего не трогает.
+# (var FREE_PRO_BUILT) и дату в документах (docs/*.html, <span data-free-pro> — Соглашение п. 4.6). Больше ничего не трогает.
 # Строку не нашёл — ничего не меняет (тогда дату поправит следующая выкладка).
 import os, re, subprocess, sys, tempfile, datetime as dt
 
@@ -41,14 +41,17 @@ def main():
         s2, n = re.subn(r"var FREE_PRO_BUILT = (?:'[^']*'|null);", lambda m: new_line, s, count=1)
         if n == 1 and s2 != s:
             write_atomic(idx, s2); changed.append('index.html')
-    offer = os.path.join(SITE, 'docs', 'offer.html')
-    if os.path.exists(offer):
-        d = dt.datetime.fromisoformat(iso).astimezone(dt.timezone(dt.timedelta(hours=9)))  # Якутск
-        ru = '%d %s %d' % (d.day, MONTHS[d.month - 1], d.year)
-        s = open(offer, encoding='utf8').read()
+    ddir = os.path.join(SITE, 'docs')
+    d = dt.datetime.fromisoformat(iso).astimezone(dt.timezone(dt.timedelta(hours=9)))  # Якутск
+    ru = '%d %s %d' % (d.day, MONTHS[d.month - 1], d.year)
+    for name in sorted(os.listdir(ddir)) if os.path.isdir(ddir) else []:
+        if not name.endswith('.html'):
+            continue
+        path = os.path.join(ddir, name)
+        s = open(path, encoding='utf8').read()
         s2, n = re.subn(r'<span data-free-pro>[^<]*</span>', '<span data-free-pro>' + ru + '</span>', s)
         if n >= 1 and s2 != s:
-            write_atomic(offer, s2); changed.append('docs/offer.html')
+            write_atomic(path, s2); changed.append('docs/' + name)
     if changed:
         print('дата бесплатного Про ' + iso + ': обновлены ' + ', '.join(changed))
 

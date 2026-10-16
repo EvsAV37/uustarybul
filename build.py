@@ -104,7 +104,7 @@ a.back{{display:inline-flex;align-items:center;height:44px;font-size:16px;font-w
 </article></main></body>
 </html>
 '''
-# Дата бесплатного Про в оферте — из базы (как в странице); потом её поддерживает ub-free-pro-sync на сервере
+# Дата бесплатного Про в документах (Соглашение п. 4.6) — из базы (как в странице); потом её поддерживает ub-free-pro-sync на сервере
 FREE_PRO_RU = None
 if FREE_PRO:
     import datetime as _dt
@@ -113,11 +113,18 @@ if FREE_PRO:
 # Черновики: документы с пометкой «Черновик». Политика, Соглашение и согласия утверждены 16.10.2026 (план, Часть 2, п. 5);
 # оферта — черновик до оплаты Про (ИНН, статус, платёжный сервис, цена доп. сферы). Меняя текст утверждённого документа,
 # поднять DOC_VERSION в src/login.js (дата редакции): люди дадут согласие на новую редакцию.
-DOCS_DRAFT = {'offer'}
+DOCS_DRAFT = set()
+# Скрытые: текст лежит в docs/src, но страница не собирается и в приложении не показывается.
+# Оферта скрыта до оплаты Про (решение 16.10.2026): бесплатный Про обещан в Соглашении, п. 4.6.
+DOCS_HIDDEN = {'offer'}
 DRAFT_HTML = '<div class="draft">Черновик. Документ ещё не утверждён, выделенные места будут заполнены.</div>\n'
 DOC_VERSION = re.search(r"var DOC_VERSION = '([0-9-]+)';", rd('src/login.js')).group(1)
 meta = []
 for src in sorted(glob.glob(os.path.join(ROOT, 'docs', 'src', '*.html'))):
+    if os.path.basename(src)[:-5] in DOCS_HIDDEN:
+        _old = os.path.join(ROOT, 'docs', os.path.basename(src))
+        if os.path.exists(_old): os.remove(_old)
+        continue
     body = open(src, encoding='utf8').read()
     ed = re.search(r'Редакция от ([^.<]+)', body)
     meta.append({'key': os.path.basename(src)[:-5], 'title': re.search(r'<h1>(.*?)</h1>', body).group(1),
@@ -132,5 +139,5 @@ for src in sorted(glob.glob(os.path.join(ROOT, 'docs', 'src', '*.html'))):
 # Сводка для управления (Настройки → Документы): редакция, пропуски в квадратных скобках, черновик ли
 import json as _json
 open(os.path.join(ROOT, 'docs', 'docs.json'), 'w', encoding='utf8').write(
-    _json.dumps({'version': DOC_VERSION, 'draft': any(m['draft'] for m in meta if m['key'] != 'offer'), 'docs': meta}, ensure_ascii=False, indent=1) + '\n')
+    _json.dumps({'version': DOC_VERSION, 'draft': any(m['draft'] for m in meta), 'hidden': sorted(DOCS_HIDDEN), 'docs': meta}, ensure_ascii=False, indent=1) + '\n')
 print('документы собраны')

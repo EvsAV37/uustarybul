@@ -1146,7 +1146,7 @@ function dirLimits(d){
     '<tr><td>Фото в направлении</td><td>'+lim(f.photos)+'</td><td>'+lim(p.photos)+'</td></tr>'+
     '<tr><td>Цена</td><td>—</td><td>990 ₽ / мес · 2 490 ₽ / 3 мес</td></tr>'+
     '<tr><td>Пробный период</td><td>—</td><td>3 месяца, один раз на номер</td></tr></tbody></table>'+
-    '<div class="note">Лимиты и цены записаны в Соглашении и оферте, поэтому здесь только для просмотра. Менять — вместе с документами: скажите Claude, он поправит базу, тексты в приложении и документы разом.</div></section>'+
+    '<div class="note">Лимиты и цены записаны в Соглашении (и в оферте — она скрыта до оплаты Про), поэтому здесь только для просмотра. Менять — вместе с документами: скажите Claude, он поправит базу, тексты в приложении и документы разом.</div></section>'+
     '<section class="card"><h2 class="h2">Бесплатный Про для всех</h2>'+(d.free_pro && d.free_pro.until ? '<div class="bigv">до '+dmy(d.free_pro.until)+'</div>' : '<div class="d">Не задан</div>')+
     '<a class="btn" href="#settings" style="align-self:flex-start">Изменить в настройках ›</a></section></div>';
 }
@@ -1175,9 +1175,9 @@ function pageSettings(){
         (until ? '<div class="bigv">до '+dmy(until)+'</div>' : '<div class="d">Дата не задана</div>')+
         '<div class="d" style="line-height:1.5">'+(going ? 'Осталось '+num(left)+' '+plural(left,'день','дня','дней')+'. ' : '')+
           (going ? 'Сейчас Про до этой даты у '+num(fp.pro_now)+' '+plural(fp.pro_now,'мастера','мастеров','мастеров')+'. ' : '')+
-          'Напоминания мастерам — за 30 и за 7 дней. При продлении Про у всех переедет на новую дату сам, а на сайте и в оферте дата обновится в течение 5 минут.</div>'+
+          'Напоминания мастерам — за 30 и за 7 дней. При продлении Про у всех переедет на новую дату сам, а на сайте и в Соглашении дата обновится в течение 5 минут.</div>'+
         (isOwner() ? '<button type="button" class="btn pr" id="fp_ext" style="align-self:flex-start">Продлить</button>' : '<div class="note">Менять может только владелец.</div>')+
-        '<div class="d">Закончить раньше нельзя: в оферте (п. 3.6) обещано до этой даты, продлевать — можно.</div>'+
+        '<div class="d">Закончить раньше нельзя: в Соглашении (п. 4.6) обещано до этой даты, продлевать — можно.</div>'+
       '</section>'+
       launchCard(st, cfg)+
       adminsCard(st)+
@@ -1193,18 +1193,18 @@ function pageSettings(){
     b = $('demo_del'); if(b) b.onclick = function(){ purgeDemo(st.demo||{}); };
   }).catch(function(err){ $('sbody').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; });
 }
-var DOCS_RU = { terms:'Соглашение', privacy:'Политика', consents:'Согласия', offer:'Оферта' };
+var DOCS_RU = { terms:'Соглашение', privacy:'Политика', consents:'Согласия' };
 // Готовность к запуску: что ещё сделать, прежде чем звать заказчиков
 function readinessCard(st, dj, cfg){
   var ops = st.ops||{}, w = ops.watch||{}, b = ops.backup||{}, adm = st.admins||[];
-  // для запуска нужны Политика, Соглашение и согласия; оферта — к оплате Про
+  // для запуска нужны Политика, Соглашение и согласия; оферта скрыта до оплаты Про
   var ld = dj ? dj.docs.filter(function(x){ return x.key!=='offer'; }) : [];
   var gaps = dj ? ld.reduce(function(a, x){ return a + x.gaps; }, 0) : null;
   var ldraft = ld.some(function(x){ return x.draft!=null ? x.draft : dj.draft; });
   var items = [
     ['Ключи Zvonok', cfg ? !!cfg.flash : null, cfg ? (cfg.flash ? 'звонок-сброс подключён'+(cfg.callback?', «позвоните нам» тоже':'') : 'не заданы'+(cfg.test_logins?' — вход только тестовыми номерами':'')) : 'не удалось проверить'],
     ['Администратор с паролем', adm.length>0 && adm.every(function(a){ return a.has_password; }), adm.length ? adm.filter(function(a){ return !a.has_password; }).length ? 'у кого-то нет пароля' : 'у всех задан' : 'нет'],
-    ['Документы', dj ? (!ldraft && gaps===0) : null, dj ? (ldraft ? 'черновики' : 'утверждены')+(gaps ? ', пропусков: '+gaps : '')+' · оферта — к оплате Про' : 'не удалось открыть'],
+    ['Документы', dj ? (!ldraft && gaps===0) : null, dj ? (ldraft ? 'черновики' : 'утверждены')+(gaps ? ', пропусков: '+gaps : '')+' · оферта скрыта до оплаты Про' : 'не удалось открыть'],
     ['Демо-мастера удалены', !(st.demo&&st.demo.masters), st.demo&&st.demo.masters ? 'осталось '+st.demo.masters : 'да'],
     ['Тестовые номера выключены', cfg ? !cfg.test_logins : !!st.test_logins_off, (cfg ? cfg.test_logins : !st.test_logins_off) ? 'включены' : 'да'],
     ['Копии базы', !!b.ok_at && Date.now()-new Date(b.ok_at) < 26*3600e3, b.ok_at ? 'последняя '+dm(b.ok_at) : 'нет'],
@@ -1264,8 +1264,7 @@ function docsCard(st, dj, until){
   var who = {
     terms: 'Приняли эту редакцию: '+num(cnt('terms', true))+old('terms'),
     privacy: 'Принимается вместе с Соглашением: '+num(cnt('terms', true)),
-    consents: 'На обработку: '+num(cnt('pd_processing', true))+' · на показ в объявлениях: '+num(cnt('pd_distribution', true))+' · на отзыв с именем: '+num(cnt('pd_distribution_review', true)),
-    offer: 'Принимается при оплате Про'+(until && new Date(until) > new Date() ? ' — до '+dmy(until)+' Про бесплатно' : '')
+    consents: 'На обработку: '+num(cnt('pd_processing', true))+' · на показ в объявлениях: '+num(cnt('pd_distribution', true))+' · на отзыв с именем: '+num(cnt('pd_distribution_review', true))
   };
   return '<section class="card" aria-label="Документы" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 class="h2">Документы</h2><span class="d">версия согласий '+esc(dj.version)+'</span></div>'+
     '<div class="g2d">'+dj.docs.slice().sort(function(a, b){ return Object.keys(DOCS_RU).indexOf(a.key) - Object.keys(DOCS_RU).indexOf(b.key); }).map(function(x){
@@ -1273,6 +1272,7 @@ function docsCard(st, dj, until){
         '<div class="d">Редакция от '+esc(x.edition||'—')+' · '+(x.gaps ? '<span style="color:var(--warn)">пропусков: '+x.gaps+'</span>' : 'пропусков нет')+'</div>'+
         '<div class="d">'+esc(who[x.key]||'')+'</div>'+
         '<a class="btn sm" href="../docs/'+esc(x.key)+'.html" target="_blank" rel="noopener" style="align-self:flex-start">Открыть</a></div>'; }).join('')+'</div>'+
+    (dj.hidden && dj.hidden.indexOf('offer')>=0 ? '<div class="d">Оферта на Про скрыта до оплаты Про: текст хранится, в приложении и на сайте её нет. Бесплатный Про обещан в Соглашении, п. 4.6; оферту опубликовать не позже чем за 30 дней до даты.</div>' : '')+
     '<div class="d">Тексты правит Claude. Когда документы утверждены — пометка «Черновик» снимается, версия согласий поднимается, и люди дают согласие на новую редакцию.</div></section>';
 }
 function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -1537,8 +1537,8 @@ function pdForm(r){
 
 /* ---------- Рассылка (только служебные сообщения) ---------- */
 // Реклама по push — только с предварительного согласия (ст. 18 закона «О рекламе»), поэтому здесь — только служебное.
-var BT = [['service','Работа сервиса','Обновления, перерывы в работе, новые города и сферы'],['docs','Документы','Изменения Соглашения, Политики, оферты'],['account','Аккаунт и карточки','Что поменялось в кабинете, сроках и лимитах']];
-var BGO = [['cab','Кабинет'],['home','Главная'],['doc:terms','Пользовательское соглашение'],['doc:privacy','Политика обработки ПДн'],['doc:consents','Согласия'],['doc:offer','Оферта на Про']];
+var BT = [['service','Работа сервиса','Обновления, перерывы в работе, новые города и сферы'],['docs','Документы','Изменения Соглашения, Политики, согласий'],['account','Аккаунт и карточки','Что поменялось в кабинете, сроках и лимитах']];
+var BGO = [['cab','Кабинет'],['home','Главная'],['doc:terms','Пользовательское соглашение'],['doc:privacy','Политика обработки ПДн'],['doc:consents','Согласия']];
 var PROMO = /скидк|акци[яиюей]|распродаж|промокод|купи|купон|выгодн|подар|розыгрыш|бонус|кэшбэк|кешбэк|партн[её]р/i;
 function bTopic(k){ var t = BT.filter(function(x){ return x[0]===k; })[0]; return t ? t[1] : k; }
 function bAudience(x){ return (x.city ? x.city : 'Все города')+' · '+(x.category ? x.category : 'все сферы'); }
