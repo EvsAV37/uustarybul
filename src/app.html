@@ -202,6 +202,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:linear-gradi
 .hfoot{text-align:center;font-size:12px;line-height:1.6;color:var(--mu);margin-top:8px;padding:18px 0 4px;border-top:1px solid var(--ln)}
 .hfoot .hdocs{margin-bottom:8px}
 .hfoot .hdocs button{white-space:nowrap}
+@media (min-width:480px){.hfoot .hdocs{margin-left:-12px;margin-right:-12px}}
+@media (max-width:479px){.hfoot .hdocs button{display:block;margin:0 auto}.hfoot .hdocs .hsep{display:none}}
 .hfoot button,.hfoot a{font-size:12px;color:var(--mu);text-decoration:underline;text-underline-offset:2px;text-decoration-color:color-mix(in srgb,var(--mu) 45%,transparent)}
 /* ---------- экраны поверх приложения (вход, отзыв, жалоба) ---------- */
 .screen{position:fixed;inset:0;z-index:15;background:var(--bg);overflow-y:auto;transform:translateY(100%);transition:transform .25s ease}
@@ -538,7 +540,7 @@ function homeView(){
     '<span><span class="eyebrow" style="display:block">Совет</span><span style="display:block;font-size:19px;font-weight:700;margin:2px 0 4px">Как не попасть на предоплату</span>'+
     '<span class="muted" style="font-size:14px">Пять правил, прежде чем переводить деньги мастеру</span></span></button>'+
   '<footer class="hfoot">'+
-    '<div class="hdocs"><button type="button" data-doc="terms">Пользовательское соглашение</button> · <button type="button" data-doc="privacy">Политика обработки персональных данных</button></div>'+
+    '<div class="hdocs"><button type="button" data-doc="terms">Пользовательское соглашение</button><span class="hsep"> · </span><button type="button" data-doc="privacy">Политика обработки персональных данных</button></div>'+
     '<div>Вопросы о персональных данных: <a href="mailto:uustarybul@mail.ru">uustarybul@mail.ru</a></div>'+
     '<div>Уустары бул · версия '+APP_VERSION+' · © 2026 Евсеев А.В.</div>'+
   '</footer>';
